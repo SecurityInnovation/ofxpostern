@@ -1,0 +1,58 @@
+ofx-postern: version 0.0.1
+
+Start: 2018-07-28 14:12:43
+  Sending GET /
+  Sending GET OFX
+  Analysing
+End:   2018-07-28 14:13:05
+
+Financial Institution
+=====================
+
+Name:    ShadowBank
+Address: 123 Fake Street
+         Mountain, CO 12345
+         USA
+
+OFX Server
+==========
+
+FI:  ShadowBank
+FID: 1001
+ORG: SB
+URL: http://ofx.shadowbank.com/ofx/ofx.dll
+TLS: Valid
+
+Capabilities
+============
+
+* Checking
+* Savings
+* Bill Pay
+
+Fingerprint
+===========
+
+ Service Provider: Metavante
+ HTTP Server:      IIS 7.5
+ App Framework:    ASP.NET
+
+ OFX Server
+  Company:         Metavante
+  Product:
+  Version:         7.2.0
+
+Tests
+=====
+
+Information Disclosure: FAIL
+  GET /: 
+     18: "Server: IIS 7.5"
+  GET OFX:
+    345: "Version: 7.2.0"
+
+NULL Values Returned: FAIL
+  POST OFX: 
+     45: <FID>NULL<FID>
+
+XSS: PASS
