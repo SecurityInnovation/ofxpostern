@@ -425,18 +425,22 @@ class OFXTestClient():
 class OFXFile():
     '''
     Read and parse an OFX file.
+
+    This is simplistic parsing of specific fields, mainly the header and PROFRS
     '''
 
     _file_str = ''
 
     headers = {}
     version = None
+    profile = {}
 
     def __init__(self, file_str):
         self._file_str = file_str
 
         self._convert_newlines()
         self._parse_header()
+        self._parse_profile()
 
     def _convert_newlines(self):
         '''
@@ -505,3 +509,34 @@ class OFXFile():
 
         else:
             raise ValueError("Parse Error: Unable to parse header")
+
+    def major_version(self):
+        if self.version.startswith('1'):
+            return 1
+        elif self.version.startswith('2'):
+            return 2
+
+    def _parse_profile(self):
+        '''
+        Parse a PROFILE response if one exists
+        '''
+
+        if self.major_version() == 1:
+            # This is where we'd should start implementing a real SGML parser,
+            # but we're doing some quick and dirty regex as a first pass
+
+            # Confirm that a PROFILE response exists
+            rpat = r'<PROFRS>'
+
+            match = re.search(rpat, self._file_str)
+            if not match:
+                return
+
+            # Get FI name
+            rpat = r'<FINAME>([^<\n]+)'
+            match = re.search(rpat, self._file_str)
+            if match:
+                self.profile['FINAME'] = match.group(1)
+
+        elif self.major_version() == 2:
+            raise NotImplemented()
