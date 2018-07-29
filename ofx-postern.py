@@ -72,6 +72,9 @@ Fingerprint an OFX server.
 import argparse
 import os
 import sys
+import time
+
+import testofx
 
 #
 # Defines
@@ -79,7 +82,12 @@ import sys
 
 PROGRAM_DESCRIPTION = 'Fingerprint an OFX server.'
 PROGRAM_NAME = 'ofx-postern'
-DATA_DIR = "{}/.{}".format(os.environ['HOME'], PROGRAM_NAME)
+VERSION = '0.0.1'
+
+DATA_DIR = '{}/.{}'.format(os.environ['HOME'], PROGRAM_NAME)
+FIS_DIR = '{}/{}'.format(DATA_DIR, 'fi')
+FI_DIR_FMT = '{}/{}'.format(FIS_DIR, '{}-{}-{}')
+
 
 #
 # Globals
@@ -87,25 +95,48 @@ DATA_DIR = "{}/.{}".format(os.environ['HOME'], PROGRAM_NAME)
 
 debug = True
 
+fi_dir = ''
+
 #
 # Helper Functions
 #
 
-def init():
+def init(server):
     '''
     Initialize environment
     '''
 
-    # Create directory to cache data
+    global fi_dir
+
+    # Convert URL into usable filename
+    url_fname = server.ofxurl.partition('/')[2][1:].replace('/','_').replace('&','+')
+    fi_dir = FI_DIR_FMT.format(url_fname, server.fid, server.org)
+
+    # Create directory to store cached data
     os.makedirs(DATA_DIR, mode=0o770, exist_ok=True)
+    os.makedirs(FIS_DIR, mode=0o770, exist_ok=True)
+    os.makedirs(fi_dir, mode=0o770, exist_ok=True)
+
+
+def print_debug(msg):
+    if debug: print('DEBUG: {}'.format(msg))
 
 #
 # Core Logic
 #
 
-def main():
+def send_profile_req(server):
+    '''
+    Send profile request to the OFX server.
+    '''
 
-    init()
+    otc = testofx.OFXTestClient(output=debug)
+    res = otc.send_req(testofx.REQ_NAME_OFX_PROFILE, server)
+
+    # Store in cache
+
+
+def main():
 
     parser = argparse.ArgumentParser(description=PROGRAM_DESCRIPTION)
     parser.add_argument('url',
@@ -118,7 +149,21 @@ def main():
             required=False)
     args = parser.parse_args()
 
-    if debug: print(args)
+    print_debug(args)
+
+    # TODO: validate input
+    server = testofx.OFXServerInstance(args.url, args.fid, args.org)
+
+    # Initialize Persistent Cache
+    init(server)
+
+    # Display work in progress
+    print('{}: version {}'.format(parser.prog, VERSION))
+    print()
+    print('Start: {}'.format(time.asctime()))
+    print('  Sending <PROFRQ>')
+    send_profile_req(server)
+    print('End:   {}'.format(time.asctime()))
 
     # Send Requests
     # - cache the results

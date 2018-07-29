@@ -13,6 +13,7 @@ Name:    ShadowBank
 Address: 123 Fake Street
          Mountain, CO 12345
          USA
+URL:     https://www.shadowbank.com
 
 OFX Server
 ==========
