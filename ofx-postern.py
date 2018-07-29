@@ -70,6 +70,7 @@ Fingerprint an OFX server.
 # - print results
 
 import argparse
+import json
 import os
 import sys
 import time
@@ -88,6 +89,8 @@ DATA_DIR = '{}/.{}'.format(os.environ['HOME'], PROGRAM_NAME)
 FIS_DIR = '{}/{}'.format(DATA_DIR, 'fi')
 FI_DIR_FMT = '{}/{}'.format(FIS_DIR, '{}-{}-{}')
 
+STR_HEADERS = 'headers'
+STR_BODY    = 'body'
 
 #
 # Globals
@@ -96,6 +99,8 @@ FI_DIR_FMT = '{}/{}'.format(FIS_DIR, '{}-{}-{}')
 debug = True
 
 fi_dir = ''
+
+req_results = {}
 
 #
 # Helper Functions
@@ -121,6 +126,39 @@ def init(server):
 def print_debug(msg):
     if debug: print('DEBUG: {}'.format(msg))
 
+
+def print_header(msg, lvl):
+    '''
+    Print a header with underline on 2nd line
+
+    Similar to <H1>, <H2>
+    '''
+    under_char = ''
+
+    if lvl == 1: under_char = '#'
+    if lvl == 2: under_char = '='
+    if lvl == 3: under_char = '-'
+    else: raise ValueError('Unknown lvl: {}'.format(lvl))
+
+    print(msg)
+    print(under_char * len(msg))
+
+
+def print_kv_list(kv_list):
+    '''
+    Print key:value list with pretty formatting
+
+    kv_list: list[tuples]
+    '''
+
+    max_len_key = 0
+    for k, v in kv_list:
+        if len(k > max_len_key):
+            max_len_key = len(k)
+
+    for k, v in kv_list:
+        print('{:max_len_key}: {}'.format(k, v)
+
 #
 # Core Logic
 #
@@ -130,10 +168,28 @@ def send_profile_req(server):
     Send profile request to the OFX server.
     '''
 
+    req_name = testofx.REQ_NAME_OFX_PROFILE
     otc = testofx.OFXTestClient(output=debug)
-    res = otc.send_req(testofx.REQ_NAME_OFX_PROFILE, server)
+    res = otc.send_req(req_name, server)
 
-    # Store in cache
+    # Store persistently for debugging
+    res_name_base = req_name.replace('/', '+').replace(' ', '_')
+    with open('{}/{}-{}'.format(fi_dir, res_name_base, STR_HEADERS), 'w') as fd:
+        fd.write(json.dumps(dict(res.headers)))
+    with open('{}/{}-{}'.format(fi_dir, res_name_base, STR_BODY), 'w') as fd:
+        fd.write(res.text)
+
+    # Store result for analysis
+    req_results[req_name] = res
+
+
+def report_cli():
+    '''
+    Print human readable report of all results to stdout
+    '''
+
+    print_header('Financial Institution', 2)
+    print()
 
 
 def main():
@@ -165,10 +221,10 @@ def main():
     send_profile_req(server)
     print('End:   {}'.format(time.asctime()))
 
-    # Send Requests
-    # - cache the results
-    # - determine TLS issues
+    # TODO: Analyze results
 
+    # Print Report
+    report_cli()
 
 if __name__ == '__main__':
     main()
