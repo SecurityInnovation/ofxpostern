@@ -600,5 +600,38 @@ class OFXFile():
                 if val:
                     self.profile['OFXURL'] = val
 
+            # Get FI capabilities
+            block = self._parse_element_block('BANKMSGSET', profrs)
+            if block:
+                self.profile['BANKING'] = dict()
+                b2 = self._parse_element_block('XFERPROF', block)
+                if b2:
+                    self.profile['BANKING']['INTRAXFR'] = True
+
+            block = self._parse_element_block('INVSTMTMSGSET', profrs)
+            if block:
+                self.profile['INVESTMENT'] = dict()
+                val = self._parse_element_span('TRANDNLD', block)
+                if val:
+                    self.profile['INVESTMENT']['TRANSACTIONS'] = True
+                val = self._parse_element_span('OODNLD', block)
+                if val:
+                    self.profile['INVESTMENT']['OPENORDERS'] = True
+                val = self._parse_element_span('POSDNLD', block)
+                if val:
+                    self.profile['INVESTMENT']['POSITIONS'] = True
+                val = self._parse_element_span('POSDNLD', block)
+                if val:
+                    self.profile['INVESTMENT']['POSITIONS'] = True
+                val = self._parse_element_span('BALDNLD', block)
+                if val:
+                    self.profile['INVESTMENT']['BALANCES'] = True
+
+            block = self._parse_element_block('SECLISTMSGSET', profrs)
+            if block:
+                val = self._parse_element_span('SECLISTRQDNLD', block)
+                if val:
+                    self.profile['INVESTMENT']['QUOTES'] = True
+
         elif self.major_version() == 2:
             raise NotImplemented()

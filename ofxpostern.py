@@ -159,6 +159,29 @@ def print_kv_list(kv_list):
     for k, v in kv_list:
         print('{:{}} {}'.format(k+':', k_width+1, v))
 
+
+def print_tree(tree, lvl=1):
+    '''
+    Print embedded lists as an indented text tree
+
+    Recursive to depth 3
+
+    tree: list[val, list[]...]
+    '''
+    indent = 2
+    bullet = ''
+
+    if lvl == 1: bullet = '*'
+    elif lvl == 2: bullet = '+'
+    elif lvl == 3: bullet = '-'
+    else: raise ValueError('Unknown lvl: {}'.format(lvl))
+
+    for i in tree:
+        if type(i) is list:
+            print_tree(i, lvl+1)
+        else:
+            print('{}{} {}'.format(' '*(indent*(lvl-1)), bullet, i))
+
 #
 # Core Logic
 #
@@ -259,12 +282,65 @@ def report_cli_server(profrs):
     print()
 
 
+def report_cli_capabilities(profrs):
+    '''
+    Print server capabilities
+    '''
+    print_header('Capabilities', 2)
+    print()
+
+    cap_tree = []
+
+    try:
+        v1 = profrs.profile['BANKING']
+        cap_tree.append('Banking')
+        sub_tree = []
+        try:
+            if v1['INTRAXFR']:
+                sub_tree.append('Intrabank Transfer')
+        except KeyError: pass
+        cap_tree.append(sub_tree)
+    except KeyError: pass
+
+    try:
+        v1 = profrs.profile['INVESTMENT']
+        cap_tree.append('Investment')
+        sub_tree = []
+        try:
+            if v1['TRANSACTIONS']:
+                sub_tree.append('Transactions')
+        except KeyError: pass
+        try:
+            if v1['OPENORDERS']:
+                sub_tree.append('Open Orders')
+        except KeyError: pass
+        try:
+            if v1['POSITIONS']:
+                sub_tree.append('Positions')
+        except KeyError: pass
+        try:
+            if v1['BALANCES']:
+                sub_tree.append('Balances')
+        except KeyError: pass
+        try:
+            if v1['QUOTES']:
+                sub_tree.append('Quotes')
+        except KeyError: pass
+        cap_tree.append(sub_tree)
+    except KeyError: pass
+
+    print_tree(cap_tree)
+
+    print()
+
+
 def report_cli(profrs):
     '''
     Print human readable report of all results to stdout
     '''
     report_cli_fi(profrs)
     report_cli_server(profrs)
+    report_cli_capabilities(profrs)
 
 
 def main():
@@ -294,11 +370,10 @@ def main():
     print('Start: {}'.format(time.asctime()))
     print('  Sending <PROFRQ>')
     send_profile_req(server)
+    print('  Analysing')
+    profrs = testofx.OFXFile(req_results[testofx.REQ_NAME_OFX_PROFILE].text)
     print('End:   {}'.format(time.asctime()))
     print()
-
-    # Analyze results
-    profrs = testofx.OFXFile(req_results[testofx.REQ_NAME_OFX_PROFILE].text)
 
     # Print Report
     report_cli(profrs)
