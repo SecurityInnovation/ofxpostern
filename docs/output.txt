@@ -13,16 +13,15 @@ Name:    ShadowBank
 Address: 123 Fake Street
          Mountain, CO 12345
          USA
-URL:     https://www.shadowbank.com
+URL:     https://www.shadowbank.com***
 
 OFX Server
 ==========
 
-FI:  ShadowBank
 FID: 1001
 ORG: SB
 URL: http://ofx.shadowbank.com/ofx/ofx.dll
-TLS: Valid
+TLS: Valid***
 
 Capabilities
 ============

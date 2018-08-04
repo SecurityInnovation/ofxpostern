@@ -80,7 +80,7 @@ REQ_METHODS = {
 # Helper Functions
 #
 
-def _print_http_response(res):
+def print_http_response(res):
     print("===Request Headers===")
     print(dict(res.request.headers))
     print("===Request Body===")
@@ -231,7 +231,7 @@ class OFXTestClient():
 
         # Connection was completed successfully
         if res is not None:
-            _print_http_response(res)
+            print_http_response(res)
 
     def send_req(self, req_name, si):
         '''
@@ -433,6 +433,7 @@ class OFXFile():
 
     headers = {}
     version = None
+    signon = {}
     profile = {}
 
     def __init__(self, file_str):
@@ -440,6 +441,7 @@ class OFXFile():
 
         self._convert_newlines()
         self._parse_header()
+        self._parse_signon()
         self._parse_profile()
 
     def _convert_newlines(self):
@@ -516,27 +518,87 @@ class OFXFile():
         elif self.version.startswith('2'):
             return 2
 
-    def _parse_profile(self):
+    def _parse_element_block(self, element, ofx_str=None):
         '''
-        Parse a PROFILE response if one exists
+        Read the internal values of a block element including other elements.
         '''
+        if not ofx_str: ofx_str = self._file_str
 
+        rpat = r'<'+element+r'>(.*)</'+element+r'>'
+        match = re.search(rpat, ofx_str, re.DOTALL)
+        if match:
+            return match.group(1)
+        else:
+            return None
+
+    def _parse_element_span(self, element, ofx_str=None):
+        '''
+        Read the value of a span <ELEMENT> tag
+        '''
+        if not ofx_str: ofx_str = self._file_str
+
+        rpat = r'<'+element+r'>([^<\n]+)'
+        match = re.search(rpat, ofx_str)
+        if match:
+            return match.group(1)
+        else:
+            return None
+
+    def _parse_signon(self):
+        '''
+        Parse a SIGNON response if one exists
+        '''
         if self.major_version() == 1:
-            # This is where we'd should start implementing a real SGML parser,
-            # but we're doing some quick and dirty regex as a first pass
-
-            # Confirm that a PROFILE response exists
-            rpat = r'<PROFRS>'
+            # Confirm a SIGNONE response exists
+            rpat = r'<SONRS>'
 
             match = re.search(rpat, self._file_str)
             if not match:
                 return
 
-            # Get FI name
-            rpat = r'<FINAME>([^<\n]+)'
-            match = re.search(rpat, self._file_str)
-            if match:
-                self.profile['FINAME'] = match.group(1)
+            # Get Server information
+            elms = ('ORG', 'FID')
+            for elm in elms:
+                val = self._parse_element_span(elm)
+                if val:
+                    self.signon[elm] = val
+
+        elif self.major_version() == 2:
+            raise NotImplemented()
+
+    def _parse_profile(self):
+        '''
+        Parse a PROFILE response if one exists
+        '''
+        if self.major_version() == 1:
+            # This is where we'd should start implementing a real SGML parser,
+            # but I'm parsing with quick and loose regex as a first pass
+
+            # Confirm that a PROFILE response exists
+            profrs = self._parse_element_block('PROFRS')
+            if not profrs:
+                return
+
+            # Get FI contact information
+            elms = ('FINAME', 'ADDR1', 'ADDR2', 'ADDR3', 'CITY',
+                    'STATE', 'POSTALCODE', 'COUNTRY')
+
+            for elm in elms:
+                val = self._parse_element_span(elm, profrs)
+                if val:
+                    self.profile[elm] = val
+
+            # Get OFX URL
+            # Technically this can be different for every message set,
+            # in practice it's usually identical to the PROFILE server.
+            # However, if it is different, it's usually the same for every
+            # other message set besides PROFMSGSET.
+
+            block = self._parse_element_block('SIGNONMSGSET', profrs)
+            if block:
+                val = self._parse_element_span('URL', block)
+                if val:
+                    self.profile['OFXURL'] = val
 
         elif self.major_version() == 2:
             raise NotImplemented()

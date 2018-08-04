@@ -82,7 +82,7 @@ import testofx
 #
 
 PROGRAM_DESCRIPTION = 'Fingerprint an OFX server.'
-PROGRAM_NAME = 'ofx-postern'
+PROGRAM_NAME = 'ofxpostern'
 VERSION = '0.0.1'
 
 DATA_DIR = '{}/.{}'.format(os.environ['HOME'], PROGRAM_NAME)
@@ -136,8 +136,8 @@ def print_header(msg, lvl):
     under_char = ''
 
     if lvl == 1: under_char = '#'
-    if lvl == 2: under_char = '='
-    if lvl == 3: under_char = '-'
+    elif lvl == 2: under_char = '='
+    elif lvl == 3: under_char = '-'
     else: raise ValueError('Unknown lvl: {}'.format(lvl))
 
     print(msg)
@@ -151,13 +151,13 @@ def print_kv_list(kv_list):
     kv_list: list[tuples]
     '''
 
-    max_len_key = 0
+    k_width = 0
     for k, v in kv_list:
-        if len(k > max_len_key):
-            max_len_key = len(k)
+        if len(k) > k_width:
+            k_width = len(k)
 
     for k, v in kv_list:
-        print('{:max_len_key}: {}'.format(k, v)
+        print('{:{}} {}'.format(k+':', k_width+1, v))
 
 #
 # Core Logic
@@ -183,13 +183,88 @@ def send_profile_req(server):
     req_results[req_name] = res
 
 
-def report_cli():
+def report_cli_fi(profrs):
     '''
-    Print human readable report of all results to stdout
+    Print Financial Institution information
     '''
 
     print_header('Financial Institution', 2)
     print()
+
+    fi_list = []
+    output = (
+            ('FINAME', 'Name'),
+            ('ADDR1', 'Address'),
+            ('ADDR2', ''),
+            ('ADDR3', ''),
+            )
+
+    for tup in output:
+        try:
+            val = profrs.profile[tup[0]]
+            fi_list.append((tup[1], val))
+        except KeyError: pass
+
+    city = ''
+    state = ''
+    postalcode = ''
+
+    try:
+        city = profrs.profile['CITY']
+        state = profrs.profile['STATE']
+        postalcode = profrs.profile['POSTALCODE']
+    except KeyError: pass
+
+    fi_list.append(('', '{}, {} {}'.format(city, state, postalcode)))
+
+    country = ''
+
+    try:
+        country = profrs.profile['COUNTRY']
+    except KeyError: pass
+
+    fi_list.append(('', country))
+
+    print_kv_list(fi_list)
+
+    print()
+
+
+def report_cli_server(profrs):
+    '''
+    Print server information
+    '''
+    print_header('OFX Server', 2)
+    print()
+
+    fi_list = []
+
+    try:
+        val = profrs.signon['FID']
+        fi_list.append(('FID', val))
+    except KeyError: pass
+
+    try:
+        val = profrs.signon['ORG']
+        fi_list.append(('ORG', val))
+    except KeyError: pass
+
+    try:
+        val = profrs.profile['OFXURL']
+        fi_list.append(('URL', val))
+    except KeyError: pass
+
+    print_kv_list(fi_list)
+
+    print()
+
+
+def report_cli(profrs):
+    '''
+    Print human readable report of all results to stdout
+    '''
+    report_cli_fi(profrs)
+    report_cli_server(profrs)
 
 
 def main():
@@ -220,11 +295,13 @@ def main():
     print('  Sending <PROFRQ>')
     send_profile_req(server)
     print('End:   {}'.format(time.asctime()))
+    print()
 
-    # TODO: Analyze results
+    # Analyze results
+    profrs = testofx.OFXFile(req_results[testofx.REQ_NAME_OFX_PROFILE].text)
 
     # Print Report
-    report_cli()
+    report_cli(profrs)
 
 if __name__ == '__main__':
     main()
