@@ -355,13 +355,31 @@ def report_cli_capabilities(profrs):
     print()
 
 
-def report_cli(profrs):
+def report_cli_fingerprint(server):
+    '''
+    Print info about service framework and software
+    '''
+    print_header('Fingerprint', 2)
+    print()
+
+    fng_list = [
+            ('HTTP Server', server.httpserver),
+            ('Web Framework', server.webframework)
+            ]
+
+    print_kv_list(fng_list)
+
+    print()
+
+
+def report_cli(server, profrs):
     '''
     Print human readable report of all results to stdout
     '''
     report_cli_fi(profrs)
     report_cli_server(profrs)
     report_cli_capabilities(profrs)
+    report_cli_fingerprint(server)
 
 
 def main():
@@ -385,19 +403,30 @@ def main():
     # Initialize Persistent Cache
     init(server)
 
+    requests = [
+        testofx.REQ_NAME_GET_ROOT,
+        testofx.REQ_NAME_GET_OFX,
+        testofx.REQ_NAME_POST_OFX,
+        testofx.REQ_NAME_OFX_EMPTY,
+        testofx.REQ_NAME_OFX_PROFILE
+    ]
+
     # Display work in progress
     print('{}: version {}'.format(parser.prog, VERSION))
     print()
     print('Start: {}'.format(time.asctime()))
-    print('  Sending <PROFRQ>')
-    send_profile_req(server)
-    print('  Analysing')
+    for req_name in requests:
+        print('  Sending {}'.format(req_name))
+        send_req(server, req_name)
+    print('  Analysing Server')
     profrs = testofx.OFXFile(req_results[testofx.REQ_NAME_OFX_PROFILE].text)
+    print('  Fingerprinting')
+    server.fingerprint(req_results)
     print('End:   {}'.format(time.asctime()))
     print()
 
     # Print Report
-    report_cli(profrs)
+    report_cli(server, profrs)
 
 if __name__ == '__main__':
     main()

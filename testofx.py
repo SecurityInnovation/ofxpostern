@@ -8,6 +8,7 @@ import json
 import re
 import requests
 import time
+from urllib.parse import urlparse
 from uuid import uuid4
 
 #
@@ -125,10 +126,129 @@ class OFXServerInstance():
     Representation of an OFX server
     '''
 
+    httpserver = ''
+    webframework = ''
+
     def __init__(self, ofxurl, fid, org):
         self.ofxurl = ofxurl
         self.fid = fid if fid else ''
         self.org = org if org else ''
+
+    def fingerprint(self, req_requests):
+        '''
+        Determine software and web frameworks running on instance.
+        '''
+
+        def _extract_http_header(res, header, field, exclude, nooverwrite):
+            '''
+            Find and store header in HTTP response.
+
+            nooverwrite: list[str] - set if nothing, but don't change exsiting
+                                     entry with these values
+            '''
+            val = None
+            try:
+                val = res.headers[header]
+            except KeyError:
+                return
+
+            # Skip if header value is in exclusion list
+            if val in exclude:
+                return
+
+            cur_val = getattr(self, field)
+            # Skip if we've already recorded the same header value
+            if cur_val == val:
+                return
+
+            # Store the header value in the ServerInstance
+            if cur_val == '':
+                setattr(self, field, val)
+            else:
+                if val in nooverwrite:
+                    return
+                else:
+                    setattr(self, field, val)
+
+        def _check_resp_body(res):
+            html = res.text
+            if html:
+                # Quick and dirty regex of <title> tag
+                prog = re.compile('<title>(.*)</title>')
+                match = prog.search(html)
+                if match:
+                    title = match.group(1)
+                    if title == 'IIS Windows Server':
+                        if self.httpserver == '':
+                            self.httpserver = 'Microsoft-IIS/8.5'
+                    elif title == 'APACHE OFX APP':
+                        if self.httpserver == '':
+                            self.httpserver = 'Apache/2.2.23'
+                    elif title == 'IBM HTTP Server 8.5':
+                        if self.httpserver == '':
+                            self.httpserver = 'IBM HTTP Server/8.5'
+                    elif title.startswith('Apache Tomcat/'):
+                        if self.httpserver in ['', 'Apache', 'Apache-Coyote/1.1']:
+                            # Removing trailing " - Error Report"
+                            self.httpserver = title[0:-15]
+                    elif title.startswith('VMware vFabric tc Runtime'):
+                        if self.httpserver == '':
+                            # Removing trailing " - Error Report"
+                            self.httpserver = title[0:-15]
+                    elif title.startswith('JBoss'):
+                        if self.httpserver in ['', 'Apache', 'Apache-Coyote/1.1']:
+                            # Removing trailing " - Error Report"
+                            self.httpserver = title[0:-15]
+                    elif title.startswith('JBWEB'):
+                        if self.httpserver in ['', 'Apache', 'Apache-Coyote/1.1']:
+                            self.httpserver = 'JBoss'
+
+        # Extract OFX "Server" header from OFX requests
+        # The HTTP server on the root of the path can be different
+        exclude = ['', 'not_available', 'Unspecified']
+        nooverwrite = [
+                'Apache-Coyote/1.1',
+                'Apache',
+                'USAA-Service',
+                'USAA-Integrity'
+                ]
+
+        for req_name in [
+                REQ_NAME_OFX_PROFILE,
+                REQ_NAME_OFX_EMPTY,
+                REQ_NAME_POST_OFX
+                ]:
+            res = req_requests[req_name]
+            _extract_http_header(
+                    res,
+                    'Server',
+                    'httpserver',
+                    exclude,
+                    nooverwrite)
+
+        # Extract Web Framework from successful OFX requests
+        # The web framework on the root of the path can be different
+        exclude = ['DI - An Intuit Company']
+        for req_name in [
+                REQ_NAME_OFX_PROFILE
+                ]:
+            res = req_requests[req_name]
+            _extract_http_header(
+                    res,
+                    'X-Powered-By',
+                    'webframework',
+                    exclude,
+                    [])
+
+        # Extract Server and Web Framework out of error body
+        for req_name in [
+                REQ_NAME_POST_OFX,
+                REQ_NAME_GET_OFX,
+                REQ_NAME_GET_ROOT
+                ]:
+
+            res = req_requests[req_name]
+            _check_resp_body(res)
 
 
 class OFXTestClient():
@@ -240,7 +360,37 @@ class OFXTestClient():
 
         res = None
 
-        if req_name == REQ_NAME_OFX_PROFILE:
+        if req_name == REQ_NAME_GET_ROOT:
+            parsed = urlparse(si.ofxurl)
+            url = parsed.scheme + '://' + parsed.netloc
+            res, was_cached = self.call_url_cached(
+                    url,
+                    True,
+                    self.get_empty_payload(si),
+                    REQ_METHODS[req_name]
+                    )
+        elif req_name == REQ_NAME_GET_OFX:
+            res, was_cached = self.call_url_cached(
+                    si.ofxurl,
+                    True,
+                    self.get_empty_payload(si),
+                    REQ_METHODS[req_name]
+                    )
+        elif req_name == REQ_NAME_POST_OFX:
+            res, was_cached = self.call_url_cached(
+                    si.ofxurl,
+                    True,
+                    self.get_empty_payload(si),
+                    REQ_METHODS[req_name]
+                    )
+        elif req_name == REQ_NAME_OFX_EMPTY:
+            res, was_cached = self.call_url_cached(
+                    si.ofxurl,
+                    True,
+                    self.get_ofx_empty_payload(si),
+                    REQ_METHODS[req_name]
+                    )
+        elif req_name == REQ_NAME_OFX_PROFILE:
             res, was_cached = self.call_url_cached(
                     si.ofxurl,
                     True,
