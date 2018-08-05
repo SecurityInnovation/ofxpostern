@@ -128,6 +128,11 @@ class OFXServerInstance():
 
     httpserver = ''
     webframework = ''
+    software = dict([
+        ('Company', ''),
+        ('Product', ''),
+        ('Version', '')
+        ])
 
     def __init__(self, ofxurl, fid, org):
         self.ofxurl = ofxurl
@@ -249,12 +254,40 @@ class OFXServerInstance():
                     exclude,
                     [])
 
+    def _fingerprint_software(self, req_requests):
+
+        # Determine software based off URL path
+        # URL Path: Company, Product
+        path_map = {
+            '/cmr/cmr.ofx': ('Enterprise Engineering','EnterpriseFTX'),
+            '/ofx/servlet/Teller': ('Finastra','Cavion'),
+            '/ofx/OFXServlet': ('FIS','Metavante'),
+            '/piles/ofx.pile/': ('First Data Corporation','FundsXPress'),
+            '/scripts/serverext.dll': ('Fiserv', 'Corillian'),
+            '/OROFX16Listener': ('Fiserv',''),
+            '/ofx/process.ofx': ('Fiserve','Corillian'),
+            '/eftxweb/access.ofx': ('Enterprise Engineering','EnterpriseFTX',),
+            '/scripts/isaofx.dll': ('Fiserv', ''),
+            '/scripts/serverext.dll': ('Fiserv','Corillian'),
+            '/ofx/ofx.dll': ('ULTRADATA Corporation', '')
+        }
+
+        parsed = urlparse(self.ofxurl)
+
+        try:
+            row = path_map[parsed.path]
+            self.software['Company'] = row[0]
+            self.software['Product'] = row[1]
+        except KeyError:
+            pass
+
     def fingerprint(self, req_requests):
         '''
         Determine software and web frameworks running on instance.
         '''
         self._fingerprint_httpserver(req_requests)
         self._fingerprint_webframework(req_requests)
+        self._fingerprint_software(req_requests)
 
 
 class OFXTestClient():

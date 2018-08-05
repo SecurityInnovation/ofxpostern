@@ -371,6 +371,19 @@ def report_cli_fingerprint(server):
 
     print()
 
+    print_header('OFX Server', 3)
+    print()
+
+    svr_list = [
+            ('Company', server.software['Company']),
+            ('Product', server.software['Product']),
+            ('Version', server.software['Version'])
+            ]
+
+    print_kv_list(svr_list)
+
+    print()
+
 
 def report_cli(server, profrs):
     '''
