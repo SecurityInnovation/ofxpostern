@@ -56,3 +56,5 @@ NULL Values Returned: FAIL
      45: <FID>NULL<FID>
 
 XSS: PASS
+
+Weak Password Policy: FAIL

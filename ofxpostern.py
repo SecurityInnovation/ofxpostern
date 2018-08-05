@@ -72,6 +72,7 @@ Fingerprint an OFX server.
 import argparse
 import json
 import os
+import pickle
 import sys
 import time
 
@@ -83,7 +84,7 @@ import testofx
 
 PROGRAM_DESCRIPTION = 'Fingerprint an OFX server.'
 PROGRAM_NAME = 'ofxpostern'
-VERSION = '0.0.1'
+VERSION = '0.1.0'
 
 DATA_DIR = '{}/.{}'.format(os.environ['HOME'], PROGRAM_NAME)
 FIS_DIR = '{}/{}'.format(DATA_DIR, 'fi')
@@ -91,16 +92,18 @@ FI_DIR_FMT = '{}/{}'.format(FIS_DIR, '{}-{}-{}')
 
 STR_HEADERS = 'headers'
 STR_BODY    = 'body'
+STR_OBJ     = 'object'
 
 #
 # Globals
 #
 
 debug = True
+cache = True
 
 fi_dir = ''
 
-req_results = {}
+req_results = dict()
 
 #
 # Helper Functions
@@ -113,14 +116,15 @@ def init(server):
 
     global fi_dir
 
-    # Convert URL into usable filename
-    url_fname = server.ofxurl.partition('/')[2][1:].replace('/','_').replace('&','+')
-    fi_dir = FI_DIR_FMT.format(url_fname, server.fid, server.org)
+    if cache:
+        # Convert URL into usable filename
+        url_fname = server.ofxurl.partition('/')[2][1:].replace('/','_').replace('&','+')
+        fi_dir = FI_DIR_FMT.format(url_fname, server.fid, server.org)
 
-    # Create directory to store cached data
-    os.makedirs(DATA_DIR, mode=0o770, exist_ok=True)
-    os.makedirs(FIS_DIR, mode=0o770, exist_ok=True)
-    os.makedirs(fi_dir, mode=0o770, exist_ok=True)
+        # Create directory to store cached data
+        os.makedirs(DATA_DIR, mode=0o770, exist_ok=True)
+        os.makedirs(FIS_DIR, mode=0o770, exist_ok=True)
+        os.makedirs(fi_dir, mode=0o770, exist_ok=True)
 
 
 def print_debug(msg):
@@ -186,24 +190,41 @@ def print_tree(tree, lvl=1):
 # Core Logic
 #
 
-def send_profile_req(server):
+def send_req(server, req_name):
     '''
-    Send profile request to the OFX server.
+    Send request to the OFX server.
     '''
 
-    req_name = testofx.REQ_NAME_OFX_PROFILE
-    otc = testofx.OFXTestClient(output=debug)
-    res = otc.send_req(req_name, server)
-
-    # Store persistently for debugging
+    cached = True
     res_name_base = req_name.replace('/', '+').replace(' ', '_')
-    with open('{}/{}-{}'.format(fi_dir, res_name_base, STR_HEADERS), 'w') as fd:
-        fd.write(json.dumps(dict(res.headers)))
-    with open('{}/{}-{}'.format(fi_dir, res_name_base, STR_BODY), 'w') as fd:
-        fd.write(res.text)
+    res_obj_path = '{}/{}-{}'.format(fi_dir, res_name_base, STR_OBJ)
+    res_hdr_path = '{}/{}-{}'.format(fi_dir, res_name_base, STR_HEADERS)
+    res_body_path = '{}/{}-{}'.format(fi_dir, res_name_base, STR_BODY)
 
-    # Store result for analysis
-    req_results[req_name] = res
+    # Pull results out of cache if they exist
+    if cache:
+        try:
+            with open(res_obj_path, 'rb') as fd:
+                print_debug('Reading res from cache')
+                req_results[req_name] = pickle.loads(fd.read())
+        except FileNotFoundError:
+            cached = False
+
+    if not cache or not cached:
+        otc = testofx.OFXTestClient(output=debug)
+        res = otc.send_req(req_name, server)
+
+        # Store result for analysis
+        req_results[req_name] = res
+
+        if cache:
+            # Store persistently for debugging
+            with open(res_obj_path, 'wb') as fd:
+                fd.write(pickle.dumps(res))
+            with open(res_hdr_path, 'w') as fd:
+                fd.write(json.dumps(dict(res.headers)))
+            with open(res_body_path, 'w') as fd:
+                fd.write(res.text)
 
 
 def report_cli_fi(profrs):
