@@ -134,41 +134,38 @@ class OFXServerInstance():
         self.fid = fid if fid else ''
         self.org = org if org else ''
 
-    def fingerprint(self, req_requests):
+    def _extract_http_header(self, res, header, field, exclude, nooverwrite):
         '''
-        Determine software and web frameworks running on instance.
+        Find and store header in HTTP response.
+
+        nooverwrite: list[str] - set if nothing, but don't change exsiting
+                                    entry with these values
         '''
+        val = None
+        try:
+            val = res.headers[header]
+        except KeyError:
+            return
 
-        def _extract_http_header(res, header, field, exclude, nooverwrite):
-            '''
-            Find and store header in HTTP response.
+        # Skip if header value is in exclusion list
+        if val in exclude:
+            return
 
-            nooverwrite: list[str] - set if nothing, but don't change exsiting
-                                     entry with these values
-            '''
-            val = None
-            try:
-                val = res.headers[header]
-            except KeyError:
+        cur_val = getattr(self, field)
+        # Skip if we've already recorded the same header value
+        if cur_val == val:
+            return
+
+        # Store the header value in the ServerInstance
+        if cur_val == '':
+            setattr(self, field, val)
+        else:
+            if val in nooverwrite:
                 return
-
-            # Skip if header value is in exclusion list
-            if val in exclude:
-                return
-
-            cur_val = getattr(self, field)
-            # Skip if we've already recorded the same header value
-            if cur_val == val:
-                return
-
-            # Store the header value in the ServerInstance
-            if cur_val == '':
-                setattr(self, field, val)
             else:
-                if val in nooverwrite:
-                    return
-                else:
-                    setattr(self, field, val)
+                setattr(self, field, val)
+
+    def _fingerprint_httpserver(self, req_requests):
 
         def _check_resp_body(res):
             html = res.text
@@ -219,28 +216,14 @@ class OFXServerInstance():
                 REQ_NAME_POST_OFX
                 ]:
             res = req_requests[req_name]
-            _extract_http_header(
+            self._extract_http_header(
                     res,
                     'Server',
                     'httpserver',
                     exclude,
                     nooverwrite)
 
-        # Extract Web Framework from successful OFX requests
-        # The web framework on the root of the path can be different
-        exclude = ['DI - An Intuit Company']
-        for req_name in [
-                REQ_NAME_OFX_PROFILE
-                ]:
-            res = req_requests[req_name]
-            _extract_http_header(
-                    res,
-                    'X-Powered-By',
-                    'webframework',
-                    exclude,
-                    [])
-
-        # Extract Server and Web Framework out of error body
+        # Extract Server out of error body
         for req_name in [
                 REQ_NAME_POST_OFX,
                 REQ_NAME_GET_OFX,
@@ -249,6 +232,29 @@ class OFXServerInstance():
 
             res = req_requests[req_name]
             _check_resp_body(res)
+
+    def _fingerprint_webframework(self, req_requests):
+
+        # Extract Web Framework from successful OFX requests
+        # The web framework on the root of the path can be different
+        exclude = ['DI - An Intuit Company']
+        for req_name in [
+                REQ_NAME_OFX_PROFILE
+                ]:
+            res = req_requests[req_name]
+            self._extract_http_header(
+                    res,
+                    'X-Powered-By',
+                    'webframework',
+                    exclude,
+                    [])
+
+    def fingerprint(self, req_requests):
+        '''
+        Determine software and web frameworks running on instance.
+        '''
+        self._fingerprint_httpserver(req_requests)
+        self._fingerprint_webframework(req_requests)
 
 
 class OFXTestClient():
