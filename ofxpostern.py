@@ -161,7 +161,8 @@ def print_kv_list(kv_list):
             k_width = len(k)
 
     for k, v in kv_list:
-        print('{:{}} {}'.format(k+':', k_width+1, v))
+        separator = ':' if len(k) > 0 else ' '
+        print('{:{}} {}'.format(k+separator, k_width+1, v))
 
 
 def print_tree(tree, lvl=1):
@@ -469,6 +470,7 @@ def main():
     tests = testofx.OFXServerTests(server)
     tests.run_tests(req_results)
     print('End:   {}'.format(time.asctime()))
+    time.sleep(1)
     print()
 
     # Print Report
