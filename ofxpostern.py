@@ -186,6 +186,19 @@ def print_tree(tree, lvl=1):
         else:
             print('{}{} {}'.format(' '*(indent*(lvl-1)), bullet, i))
 
+
+def print_list(lst, indent=0):
+    '''
+    Print list with option intent
+
+    lst: list[]
+    indent: int, number of spaces
+    '''
+    bullet = '*'
+
+    for i in lst:
+        print('{}{} {}'.format(' '*indent, bullet, i))
+
 #
 # Core Logic
 #
@@ -283,6 +296,8 @@ def report_cli_server(profrs):
 
     fi_list = []
 
+    fi_list.append(('OFX Version', profrs.get_version()))
+
     try:
         val = profrs.signon['FID']
         fi_list.append(('FID', val))
@@ -371,7 +386,7 @@ def report_cli_fingerprint(server):
 
     print()
 
-    print_header('OFX Server', 3)
+    print_header('OFX Software', 3)
     print()
 
     svr_list = [
@@ -385,7 +400,21 @@ def report_cli_fingerprint(server):
     print()
 
 
-def report_cli(server, profrs):
+def report_cli_tests(tests):
+    '''
+    Print info about security tests
+    '''
+    print_header('Tests', 2)
+    print()
+
+    for tres in tests.results:
+        title = (tres['Title'], 'PASS' if tres['Passed'] else 'FAIL')
+        print_kv_list([title])
+        print_list(tres['Messages'], 2)
+        print ()
+
+
+def report_cli(server, profrs, tests):
     '''
     Print human readable report of all results to stdout
     '''
@@ -393,6 +422,7 @@ def report_cli(server, profrs):
     report_cli_server(profrs)
     report_cli_capabilities(profrs)
     report_cli_fingerprint(server)
+    report_cli_tests(tests)
 
 
 def main():
@@ -435,11 +465,14 @@ def main():
     profrs = testofx.OFXFile(req_results[testofx.REQ_NAME_OFX_PROFILE].text)
     print('  Fingerprinting')
     server.fingerprint(req_results)
+    print('  Running Tests')
+    tests = testofx.OFXServerTests(server)
+    tests.run_tests(req_results)
     print('End:   {}'.format(time.asctime()))
     print()
 
     # Print Report
-    report_cli(server, profrs)
+    report_cli(server, profrs, tests)
 
 if __name__ == '__main__':
     main()

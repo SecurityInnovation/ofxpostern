@@ -822,5 +822,86 @@ class OFXFile():
                 if val:
                     self.profile['INVESTMENT']['QUOTES'] = True
 
+            # Get Password Policy
+            block = self._parse_element_block('SIGNONINFO', profrs)
+            if block:
+                self.profile['AUTHENTICATION'] = dict()
+                val = self._parse_element_span('MIN', block)
+                if val:
+                    self.profile['AUTHENTICATION']['MINPASS'] = int(val)
+                val = self._parse_element_span('MAX', block)
+                if val:
+                    self.profile['AUTHENTICATION']['MAXPASS'] = int(val)
+                val = self._parse_element_span('CHARTYPE', block)
+                if val:
+                    self.profile['AUTHENTICATION']['COMPLEXITY'] = val
+                val = self._parse_element_span('CASESEN', block)
+                if val:
+                    if val == 'Y':
+                        self.profile['AUTHENTICATION']['CASESEN'] = True
+                    elif val == 'N':
+                        self.profile['AUTHENTICATION']['CASESEN'] = False
+                    else:
+                        raise ValueError(
+                            'Unknown value for CASESEN: {}'.format(va))
+                val = self._parse_element_span('SPECIAL', block)
+                if val:
+                    if val == 'Y':
+                        self.profile['AUTHENTICATION']['SPECIAL'] = True
+                    elif val == 'N':
+                        self.profile['AUTHENTICATION']['SPECIAL'] = False
+                    else:
+                        raise ValueError(
+                            'Unknown value for SPECIAL: {}'.format(va))
+
         elif self.major_version() == 2:
             raise NotImplemented()
+
+    def get_version(self):
+        '''
+        Return string representation of OFX document version number.
+        '''
+        if self.version:
+            return '.'.join(list(self.version))
+        else:
+            return ''
+
+
+class OFXServerTests():
+    '''
+    Run collection of OFX tests
+    '''
+
+    results = []
+
+    def __init__(self, server):
+        self.si = server
+
+    def run_tests(self, req_results):
+        self.test_password_policy(req_results)
+
+    def test_password_policy(self, req_results):
+        title = 'Password Policy'
+        passed = True
+        messages = []
+
+        profrs = OFXFile(req_results[REQ_NAME_OFX_PROFILE].text)
+
+        minpass = None
+        requirement = 8
+        try:
+            minpass = profrs.profile['AUTHENTICATION']['MINPASS']
+        except KeyError:
+            pass
+        if minpass and minpass < requirement:
+            passed = False
+            msg = 'Minimum password length ({}) is less than recommended ({})'.format(
+                    minpass, requirement)
+            messages.append(msg)
+
+        self.results.append({
+            'Title': title,
+            'Passed': passed,
+            'Messages': messages
+            })
+
