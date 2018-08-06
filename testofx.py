@@ -667,7 +667,7 @@ class OFXFile():
                 self.headers[k] = v
 
             try:
-                self.version = self.headers[HDR_VERSION]
+                self.version = int(self.headers[HDR_VERSION])
             except KeyError:
                 raise ValueError("Parse Error: No version")
 
@@ -693,7 +693,7 @@ class OFXFile():
                 self.headers[field] = match.group(field)
 
             try:
-                self.version = self.headers[HDR_VERSION]
+                self.version = int(self.headers[HDR_VERSION])
                 parsed = True
             except KeyError:
                 raise ValueError("Parse Error: No version")
@@ -702,9 +702,9 @@ class OFXFile():
             raise ValueError("Parse Error: Unable to parse header")
 
     def major_version(self):
-        if self.version.startswith('1'):
+        if str(self.version).startswith('1'):
             return 1
-        elif self.version.startswith('2'):
+        elif str(self.version).startswith('2'):
             return 2
 
     def _parse_element_block(self, element, ofx_str=None):
@@ -862,7 +862,7 @@ class OFXFile():
         Return string representation of OFX document version number.
         '''
         if self.version:
-            return '.'.join(list(self.version))
+            return '.'.join(list(str(self.version)))
         else:
             return ''
 
@@ -878,7 +878,30 @@ class OFXServerTests():
         self.si = server
 
     def run_tests(self, req_results):
+        self.test_mfa(req_results)
         self.test_password_policy(req_results)
+
+    def test_mfa(self, req_results):
+        title = 'Multi-Factor Authentication'
+        passed = True
+        messages = []
+
+        profrs = OFXFile(req_results[REQ_NAME_OFX_PROFILE].text)
+
+        if profrs.major_version() == 1:
+            requirement = 103
+
+            if profrs.version and profrs.version < requirement:
+                passed = False
+                msg = 'OFX protocol version ({}) does not support MFA'.format(
+                        profrs.get_version())
+                messages.append(msg)
+
+            self.results.append({
+                'Title': title,
+                'Passed': passed,
+                'Messages': messages
+                })
 
     def test_password_policy(self, req_results):
         title = 'Password Policy'
