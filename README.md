@@ -5,7 +5,11 @@ Vulnerability scanner for OFX servers.
 
 ## Installation
 
-**ofxpostern** is written in Python 3 with few external dependencies.
+**ofxpostern** is written in Python 3 with few external dependencies. It has only been tested on Linux.
+
+1. `git clone git@github.com:sdann/ofxpostern.git`
+2. `cd ofxpostern`
+3. `pip install -r requirements.txt`
 
 ## Usage
 
@@ -19,9 +23,13 @@ The Financial Identifer (FID) and Oranganization (ORG) are sometimes optional, s
 
 A current list of public OFX servers is available at https://ofxhome.com/.
 
-## Tests
+## Security Scan
 
 Only a small number of security tests are currently implemented. All are done with anonymous credentials.
 
 * Check for MFA support within the protocol.
 * Check password policy
+
+## Advanced
+
+Within the *ofxpostern.py* script the *cache* global variable can be enabled to store text copies of all OFX protocol responses to `$HOME/.ofxpostern/`.
