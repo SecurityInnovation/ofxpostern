@@ -265,7 +265,7 @@ class OFXServerInstance():
             '/piles/ofx.pile/': ('First Data Corporation','FundsXPress'),
             '/scripts/serverext.dll': ('Fiserv', 'Corillian'),
             '/OROFX16Listener': ('Fiserv',''),
-            '/ofx/process.ofx': ('Fiserve','Corillian'),
+            '/ofx/process.ofx': ('Fiserv','Corillian'),
             '/eftxweb/access.ofx': ('Enterprise Engineering','EnterpriseFTX',),
             '/scripts/isaofx.dll': ('Fiserv', ''),
             '/scripts/serverext.dll': ('Fiserv','Corillian'),

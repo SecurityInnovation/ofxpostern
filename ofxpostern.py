@@ -33,8 +33,8 @@ STR_OBJ     = 'object'
 # Globals
 #
 
-debug = True
-cache = True
+debug = False
+cache = False
 
 fi_dir = ''
 
