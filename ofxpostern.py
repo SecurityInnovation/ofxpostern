@@ -8,6 +8,7 @@ import argparse
 import json
 import os
 import pickle
+import requests
 import sys
 import time
 
@@ -33,7 +34,7 @@ STR_OBJ     = 'object'
 # Globals
 #
 
-debug = False
+debug = True
 cache = False
 
 fi_dir = ''
@@ -160,7 +161,7 @@ def send_req(server, req_name):
             cached = False
 
     if not cache or not cached:
-        otc = testofx.OFXTestClient(output=debug)
+        otc = testofx.OFXTestClient(output=debug, tls_verify=server.get_tls())
         res = otc.send_req(req_name, server)
 
         # Store result for analysis
@@ -174,6 +175,23 @@ def send_req(server, req_name):
                 fd.write(json.dumps(dict(res.headers)))
             with open(res_body_path, 'w') as fd:
                 fd.write(res.text)
+
+
+def check_tls(server, tls_verify):
+    '''
+    Check server TLS settings.
+    '''
+
+    # Do a simple works/not works check for now
+    try:
+        r = requests.get(server.ofxurl)
+    except requests.exceptions.SSLError as ex:
+        server.set_tls(False)
+        print(ex)
+        if tls_verify:
+            sys.exit(-1)
+    else:
+        server.set_tls(True)
 
 
 def report_cli_fi(profrs):
@@ -372,6 +390,12 @@ def main():
     parser.add_argument('-o', '--org',
             help='Organization within the Institution',
             required=False)
+    parser.add_argument('--no-tls-verify',
+            dest='tls_verify',
+            action='store_false',
+            help='Skip TLS verification',
+            required=False)
+    parser.set_defaults(tls_verify=True)
     args = parser.parse_args()
 
     print_debug(args)
@@ -394,6 +418,8 @@ def main():
     print('{}: version {}'.format(parser.prog, VERSION))
     print()
     print('Start: {}'.format(time.asctime()))
+    print('  Checking TLS')
+    check_tls(server, args.tls_verify)
     for req_name in requests:
         print('  Sending {}'.format(req_name))
         send_req(server, req_name)

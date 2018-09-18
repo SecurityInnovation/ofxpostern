@@ -133,6 +133,7 @@ class OFXServerInstance():
         ('Product', ''),
         ('Version', '')
         ])
+    tls = dict()
 
     def __init__(self, ofxurl, fid, org):
         self.ofxurl = ofxurl
@@ -289,6 +290,12 @@ class OFXServerInstance():
         self._fingerprint_webframework(req_requests)
         self._fingerprint_software(req_requests)
 
+    def get_tls(self):
+        return self.tls['working']
+
+    def set_tls(self, working):
+        self.tls['working'] = working
+
 
 class OFXTestClient():
 
@@ -304,13 +311,15 @@ class OFXTestClient():
             wait=0,
             use_cache=False,
             output=False,
-            version='102'
+            version='102',
+            tls_verify=True
             ):
         self.timeout = timeout
         self.wait = wait
         self.use_cache = use_cache
         self._output=output
         self.version = version
+        self.tls_verify = tls_verify
 
         if self.version[0] == '1':
             self.ofxheader = OFX_HEADER_100.format(version=self.version)
@@ -322,7 +331,7 @@ class OFXTestClient():
             raise ValueError(
                     'Unknown OFX version number {}'.format(self.version))
 
-    def call_url_cached(self, url, tlsverify, body, method):
+    def call_url_cached(self, url, tls_verify, body, method):
         '''
         return (request.response, boolean) - Response and whether it was
                 cached.
@@ -353,14 +362,14 @@ class OFXTestClient():
                         url,
                         headers=headers,
                         timeout=self.timeout,
-                        verify=tlsverify
+                        verify=tls_verify
                         )
             elif method == 'POST':
                 r = requests.post(
                         url,
                         headers=headers,
                         timeout=self.timeout,
-                        verify=tlsverify,
+                        verify=tls_verify,
                         data=body
                         )
             if self.use_cache:
@@ -380,10 +389,10 @@ class OFXTestClient():
 
         return (None, False)
 
-    def call_url_interactive(self, ofxurl, payload, method):
+    def call_url_interactive(self, ofxurl, tls_verify, payload, method):
         res, was_cached = self.call_url_cached(
                 ofxurl,
-                True,
+                tls_verify,
                 payload,
                 method
                 )
@@ -404,35 +413,35 @@ class OFXTestClient():
             url = parsed.scheme + '://' + parsed.netloc
             res, was_cached = self.call_url_cached(
                     url,
-                    True,
+                    self.tls_verify,
                     self.get_empty_payload(si),
                     REQ_METHODS[req_name]
                     )
         elif req_name == REQ_NAME_GET_OFX:
             res, was_cached = self.call_url_cached(
                     si.ofxurl,
-                    True,
+                    self.tls_verify,
                     self.get_empty_payload(si),
                     REQ_METHODS[req_name]
                     )
         elif req_name == REQ_NAME_POST_OFX:
             res, was_cached = self.call_url_cached(
                     si.ofxurl,
-                    True,
+                    self.tls_verify,
                     self.get_empty_payload(si),
                     REQ_METHODS[req_name]
                     )
         elif req_name == REQ_NAME_OFX_EMPTY:
             res, was_cached = self.call_url_cached(
                     si.ofxurl,
-                    True,
+                    self.tls_verify,
                     self.get_ofx_empty_payload(si),
                     REQ_METHODS[req_name]
                     )
         elif req_name == REQ_NAME_OFX_PROFILE:
             res, was_cached = self.call_url_cached(
                     si.ofxurl,
-                    True,
+                    self.tls_verify,
                     self.get_profile_payload(si),
                     REQ_METHODS[req_name]
                     )
@@ -878,8 +887,25 @@ class OFXServerTests():
         self.si = server
 
     def run_tests(self, req_results):
+        self.test_tls(self.si)
         self.test_mfa(req_results)
         self.test_password_policy(req_results)
+
+    def test_tls(self, server):
+        title = 'Transport Layer Secrity (TLS)'
+        passed = True
+        messages = []
+
+        if not server.get_tls():
+            passed = False
+            msg = 'Unable to securely connect to the server over TLS'
+            messages.append(msg)
+
+        self.results.append({
+            'Title': title,
+            'Passed': passed,
+            'Messages': messages
+            })
 
     def test_mfa(self, req_results):
         title = 'Multi-Factor Authentication'
