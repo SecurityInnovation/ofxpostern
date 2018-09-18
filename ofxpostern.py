@@ -35,7 +35,7 @@ STR_OBJ     = 'object'
 #
 
 debug = True
-cache = False
+cache = True
 
 fi_dir = ''
 
@@ -289,6 +289,20 @@ def report_cli_capabilities(profrs):
             if v1['INTRAXFR']:
                 sub_tree.append('Intrabank Transfer')
         except KeyError: pass
+        try:
+            v2 = v1['MESSAGES']
+            sub_tree.append('Messaging')
+            sub_sub_tree = []
+            try:
+                if v2['EMAIL']:
+                    sub_sub_tree.append('Email')
+            except KeyError: pass
+            try:
+                if v2['NOTIFY']:
+                    sub_sub_tree.append('Notifications')
+            except KeyError: pass
+            sub_tree.append(sub_sub_tree)
+        except KeyError: pass
         cap_tree.append(sub_tree)
     except KeyError: pass
 
@@ -315,6 +329,38 @@ def report_cli_capabilities(profrs):
         try:
             if v1['QUOTES']:
                 sub_tree.append('Quotes')
+        except KeyError: pass
+        cap_tree.append(sub_tree)
+    except KeyError: pass
+
+    try:
+        v1 = profrs.profile['MESSAGING']
+        cap_tree.append('Messaging')
+        sub_tree = []
+        try:
+            if v1['EMAIL']:
+                sub_tree.append('Email')
+        except KeyError: pass
+        try:
+            if v1['MIME']:
+                sub_tree.append('MIME')
+        except KeyError: pass
+        cap_tree.append(sub_tree)
+    except KeyError: pass
+
+    try:
+        v1 = profrs.profile['AUTHENTICATION']
+        cap_tree.append('Authentication')
+        sub_tree = []
+        try:
+            v2 = v1['MFA']
+            sub_tree.append('MFA')
+            sub_sub_tree = []
+            try:
+                if v2['CLIENTUID']:
+                    sub_sub_tree.append('Require Client ID')
+            except KeyError: pass
+            sub_tree.append(sub_sub_tree)
         except KeyError: pass
         cap_tree.append(sub_tree)
     except KeyError: pass

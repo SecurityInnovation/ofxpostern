@@ -805,6 +805,15 @@ class OFXFile():
                 b2 = self._parse_element_block('XFERPROF', block)
                 if b2:
                     self.profile['BANKING']['INTRAXFR'] = True
+                b2 = self._parse_element_block('EMAILPROF', block)
+                if b2:
+                    self.profile['BANKING']['MESSAGES'] = dict()
+                    val = self._parse_element_span('CANEMAIL', b2)
+                    if val == 'Y':
+                        self.profile['BANKING']['MESSAGES']['EMAIL'] = True
+                    val = self._parse_element_span('CANNOTIFY', b2)
+                    if val == 'Y':
+                        self.profile['BANKING']['MESSAGES']['NOTIFY'] = True
 
             block = self._parse_element_block('INVSTMTMSGSET', profrs)
             if block:
@@ -830,6 +839,16 @@ class OFXFile():
                 val = self._parse_element_span('SECLISTRQDNLD', block)
                 if val:
                     self.profile['INVESTMENT']['QUOTES'] = True
+
+            block = self._parse_element_block('EMAILMSGSET', profrs)
+            if block:
+                self.profile['MESSAGING'] = dict()
+                val = self._parse_element_span('MAILSUP')
+                if val == 'Y':
+                    self.profile['MESSAGING']['EMAIL'] = True
+                val = self._parse_element_span('GETMIMESUP')
+                if val == 'Y':
+                    self.profile['MESSAGING']['MIME'] = True
 
             # Get Password Policy
             block = self._parse_element_block('SIGNONINFO', profrs)
@@ -862,6 +881,13 @@ class OFXFile():
                     else:
                         raise ValueError(
                             'Unknown value for SPECIAL: {}'.format(va))
+                val = self._parse_element_span('CLIENTUIDREQ')
+                if val == 'Y':
+                    try:
+                        tmp = self.profile['AUTHENTICATION']['MFA']
+                    except KeyError:
+                        self.profile['AUTHENTICATION']['MFA'] = dict()
+                    self.profile['AUTHENTICATION']['MFA']['CLIENTUID'] = True
 
         elif self.major_version() == 2:
             raise NotImplemented()
