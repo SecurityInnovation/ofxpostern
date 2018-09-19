@@ -392,11 +392,18 @@ def report_cli_fingerprint(server):
     print_header('OFX Software', 3)
     print()
 
-    svr_list = [
+    svr_list = []
+
+    if server.serviceprovider != '':
+        svr_list.append(('Service Provider', server.serviceprovider))
+        svr_list.append(('', ''))
+
+    svr_list.extend([
             ('Company', server.software['Company']),
             ('Product', server.software['Product']),
             ('Version', server.software['Version'])
             ]
+    )
 
     print_kv_list(svr_list)
 

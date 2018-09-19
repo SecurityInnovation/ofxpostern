@@ -133,6 +133,7 @@ class OFXServerInstance():
         ('Product', ''),
         ('Version', '')
         ])
+    serviceprovider = ''
     tls = dict()
 
     def __init__(self, ofxurl, fid, org):
@@ -171,7 +172,7 @@ class OFXServerInstance():
             else:
                 setattr(self, field, val)
 
-    def _fingerprint_httpserver(self, req_requests):
+    def _fingerprint_httpserver(self, req_results):
 
         def _check_resp_body(res):
             html = res.text
@@ -221,7 +222,7 @@ class OFXServerInstance():
                 REQ_NAME_OFX_EMPTY,
                 REQ_NAME_POST_OFX
                 ]:
-            res = req_requests[req_name]
+            res = req_results[req_name]
             self._extract_http_header(
                     res,
                     'Server',
@@ -236,10 +237,10 @@ class OFXServerInstance():
                 REQ_NAME_GET_ROOT
                 ]:
 
-            res = req_requests[req_name]
+            res = req_results[req_name]
             _check_resp_body(res)
 
-    def _fingerprint_webframework(self, req_requests):
+    def _fingerprint_webframework(self, req_results):
 
         # Extract Web Framework from successful OFX requests
         # The web framework on the root of the path can be different
@@ -247,7 +248,7 @@ class OFXServerInstance():
         for req_name in [
                 REQ_NAME_OFX_PROFILE
                 ]:
-            res = req_requests[req_name]
+            res = req_results[req_name]
             self._extract_http_header(
                     res,
                     'X-Powered-By',
@@ -255,7 +256,7 @@ class OFXServerInstance():
                     exclude,
                     [])
 
-    def _fingerprint_software(self, req_requests):
+    def _fingerprint_software(self, req_results):
 
         # Determine software based off URL path
         # URL Path: Company, Product
@@ -284,13 +285,30 @@ class OFXServerInstance():
         except KeyError:
             pass
 
-    def fingerprint(self, req_requests):
+    def _fingerprint_service_provider(self, req_results):
+
+        # Determine which service provider (if any) is hosting this instance
+        # TODO: URL map
+
+        # For now, just read the value out of <SPNAME> if it exists
+        profrs = OFXFile(req_results[REQ_NAME_OFX_PROFILE].text)
+
+        sp = ''
+        try:
+            sp = profrs.profile['SPNAME']
+        except KeyError: pass
+
+        self.serviceprovider = sp
+
+
+    def fingerprint(self, req_results):
         '''
         Determine software and web frameworks running on instance.
         '''
-        self._fingerprint_httpserver(req_requests)
-        self._fingerprint_webframework(req_requests)
-        self._fingerprint_software(req_requests)
+        self._fingerprint_httpserver(req_results)
+        self._fingerprint_webframework(req_results)
+        self._fingerprint_software(req_results)
+        self._fingerprint_service_provider(req_results)
 
     def get_tls(self):
         return self.tls['working']
@@ -749,7 +767,7 @@ class OFXFile():
         Parse a SIGNON response if one exists
         '''
         if self.major_version() == 1:
-            # Confirm a SIGNONE response exists
+            # Confirm a SIGNON response exists
             rpat = r'<SONRS>'
 
             match = re.search(rpat, self._file_str)
@@ -799,6 +817,9 @@ class OFXFile():
                 val = self._parse_element_span('URL', block)
                 if val:
                     self.profile['OFXURL'] = val
+                val = self._parse_element_span('SPNAME', block)
+                if val:
+                    self.profile['SPNAME'] = val
 
             # Get FI capabilities
             block = self._parse_element_block('BANKMSGSET', profrs)
@@ -1047,9 +1068,11 @@ class OFXServerTests():
         passed = True
         messages = []
 
-        # Because our current fingerprinting only users server headers and
+        # Because our current fingerprinting only uses server headers and
         # banners, we can assume if we've identified one, then it's a simple
         # information disclosure.
+
+        # Only error on servers that diclose their version number
 
         s = server.httpserver
         if s != '' and any(str(num) in s for num in range(10)):
