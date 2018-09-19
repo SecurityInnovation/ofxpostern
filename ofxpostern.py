@@ -34,7 +34,7 @@ STR_OBJ     = 'object'
 # Globals
 #
 
-debug = True
+debug = False
 cache = True
 
 fi_dir = ''

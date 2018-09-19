@@ -781,7 +781,7 @@ class OFXFile():
 
             # Get FI contact information
             elms = ('FINAME', 'ADDR1', 'ADDR2', 'ADDR3', 'CITY',
-                    'STATE', 'POSTALCODE', 'COUNTRY')
+                    'STATE', 'POSTALCODE', 'COUNTRY', 'EMAIL')
 
             for elm in elms:
                 val = self._parse_element_span(elm, profrs)
@@ -918,9 +918,10 @@ class OFXServerTests():
         self.test_tls(self.si)
         self.test_mfa(req_results)
         self.test_password_policy(req_results)
+        self.test_user_disclosure(req_results)
 
     def test_tls(self, server):
-        title = 'Transport Layer Secrity (TLS)'
+        title = 'Transport Layer Security (TLS)'
         passed = True
         messages = []
 
@@ -975,6 +976,63 @@ class OFXServerTests():
             msg = 'Minimum password length ({}) is less than recommended ({})'.format(
                     minpass, requirement)
             messages.append(msg)
+
+        self.results.append({
+            'Title': title,
+            'Passed': passed,
+            'Messages': messages
+            })
+
+    def test_user_disclosure(self, req_results):
+        title = 'Username Disclosure'
+        passed = True
+        messages = []
+
+        common_aliases_exact = ['test', 'members', 'it', 'email', 'assist']
+
+        common_aliases_in = ['info', 'support', 'service', 'reply', 'online',
+        'help', 'webmaster', 'quicken', 'question', 'postmaster', 'client',
+        'internet', 'bank', 'commerce', 'business', 'deposit', 'customer',
+        'feedback', 'central', 'center', 'bookkeep', 'ask', 'virtual',
+        'management', 'operation', 'contact', 'inbox', 'staff', 'investor']
+
+        profrs = OFXFile(req_results[REQ_NAME_OFX_PROFILE].text)
+        try:
+            email = profrs.profile['EMAIL']
+        except:
+            email = ''
+
+        # 1) Check that it has an @ sign
+        # 2) Lowercase
+        # 3) Check if common_aliases_exact doesn't match
+        # 4) Check common_aliases_in is not in it
+        # 5) Check if name == domain
+        # 6) Check if it has a '.' or '_'
+        #     a) Likely a username
+        #     b) Mark as Error
+        # 7) Else:
+        #     a) Likely a username
+        #     b) Mark as Warning
+
+        if '@' in email:
+            email_lc = email.lower()
+            name = email_lc.split('@')[0]
+            domain = email_lc.split('@')[1].rsplit('.')[1]
+
+            if name in common_aliases_exact:
+                pass
+            elif any(substring in name for substring in common_aliases_in):
+                pass
+            elif name == domain:
+                pass
+            else:
+                passed = False
+                if '.' in name or '_' in name:
+                    msg = 'Email address is likely a username: {}'.format(email)
+                else:
+                    msg = 'Email address may be a username: {}'.format(
+                            email)
+                messages.append(msg)
 
         self.results.append({
             'Title': title,
