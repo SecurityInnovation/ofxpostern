@@ -270,7 +270,9 @@ class OFXServerInstance():
             '/eftxweb/access.ofx': ('Enterprise Engineering','EnterpriseFTX',),
             '/scripts/isaofx.dll': ('Fiserv', ''),
             '/scripts/serverext.dll': ('Fiserv','Corillian'),
-            '/ofx/ofx.dll': ('ULTRADATA Corporation', '')
+            '/ofx/ofx.dll': ('ULTRADATA Corporation', ''),
+            '/ofxserver/ofxsrvr.dll': ('Access Softek', 'OFXServer'),
+            '/OFXServer/ofxsrvr.dll': ('Access Softek', 'OFXServer'),
         }
 
         parsed = urlparse(self.ofxurl)
