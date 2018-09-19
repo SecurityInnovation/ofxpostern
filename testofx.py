@@ -916,6 +916,7 @@ class OFXServerTests():
 
     def run_tests(self, req_results):
         self.test_tls(self.si)
+        self.test_server_diclosure(self.si)
         self.test_mfa(req_results)
         self.test_password_policy(req_results)
         self.test_user_disclosure(req_results)
@@ -1040,3 +1041,24 @@ class OFXServerTests():
             'Messages': messages
             })
 
+
+    def test_server_diclosure(self, server):
+        title = 'Web Server Disclosure'
+        passed = True
+        messages = []
+
+        # Because our current fingerprinting only users server headers and
+        # banners, we can assume if we've identified one, then it's a simple
+        # information disclosure.
+
+        s = server.httpserver
+        if s != '' and any(str(num) in s for num in range(10)):
+            passed = False
+            msg = 'Web server discloses type and version: {}'.format(s)
+            messages.append(msg)
+
+        self.results.append({
+            'Title': title,
+            'Passed': passed,
+            'Messages': messages
+            })
