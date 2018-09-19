@@ -291,7 +291,6 @@ def report_cli_capabilities(profrs):
         except KeyError: pass
         try:
             v2 = v1['MESSAGES']
-            sub_tree.append('Messaging')
             sub_sub_tree = []
             try:
                 if v2['EMAIL']:
@@ -301,7 +300,9 @@ def report_cli_capabilities(profrs):
                 if v2['NOTIFY']:
                     sub_sub_tree.append('Notifications')
             except KeyError: pass
-            sub_tree.append(sub_sub_tree)
+            if len(sub_sub_tree) > 0:
+                sub_tree.append('Messaging')
+                sub_tree.append(sub_sub_tree)
         except KeyError: pass
         cap_tree.append(sub_tree)
     except KeyError: pass
@@ -350,19 +351,21 @@ def report_cli_capabilities(profrs):
 
     try:
         v1 = profrs.profile['AUTHENTICATION']
-        cap_tree.append('Authentication')
         sub_tree = []
         try:
             v2 = v1['MFA']
-            sub_tree.append('MFA')
             sub_sub_tree = []
             try:
                 if v2['CLIENTUID']:
                     sub_sub_tree.append('Require Client ID')
             except KeyError: pass
-            sub_tree.append(sub_sub_tree)
+            if len(sub_sub_tree) > 0:
+                sub_tree.append('MFA')
+                sub_tree.append(sub_sub_tree)
         except KeyError: pass
-        cap_tree.append(sub_tree)
+        if len(sub_tree) > 0:
+            cap_tree.append('Authentication')
+            cap_tree.append(sub_tree)
     except KeyError: pass
 
     print_tree(cap_tree)
