@@ -863,6 +863,10 @@ class OFXFile():
                 if val:
                     self.profile['INVESTMENT']['QUOTES'] = True
 
+            block = self._parse_element_block('CREDITCARDMSGSET', profrs)
+            if block:
+                self.profile['CREDITCARD'] = dict()
+
             block = self._parse_element_block('EMAILMSGSET', profrs)
             if block:
                 self.profile['MESSAGING'] = dict()
