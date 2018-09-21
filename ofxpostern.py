@@ -336,6 +336,16 @@ def report_cli_capabilities(profrs):
         cap_tree.append(sub_tree)
     except KeyError: pass
 
+    try:
+        v1 = profrs.profile['CREDITCARD']
+        cap_tree.append('Credit Card')
+        sub_tree = []
+        try:
+            if v1['STATEMENT']:
+                sub_tree.append('Closing Statement')
+        except KeyError: pass
+        cap_tree.append(sub_tree)
+    except KeyError: pass
 
     try:
         v1 = profrs.profile['TAXES']

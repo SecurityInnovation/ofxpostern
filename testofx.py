@@ -954,6 +954,9 @@ class OFXFile():
             block = self._parse_element_block('CREDITCARDMSGSET', profrs)
             if block:
                 self.profile['CREDITCARD'] = dict()
+                val = self._parse_element_span('CLOSINGAVAIL', block)
+                if val == 'Y':
+                    self.profile['CREDITCARD']['STATEMENT'] = True
 
             block = self._parse_element_block('EMAILMSGSET', profrs)
             if block:
@@ -1313,3 +1316,4 @@ class OFXServerTests():
             'Passed': passed,
             'Messages': messages
             })
+
