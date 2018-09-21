@@ -1143,6 +1143,7 @@ class OFXServerTests():
         self.test_mfa(req_results)
         self.test_password_policy(req_results)
         self.test_user_disclosure(req_results)
+        self.test_content_type(req_results)
 
     def test_tls(self, server):
         title = 'Transport Layer Security (TLS)'
@@ -1183,7 +1184,6 @@ class OFXServerTests():
             'Passed': passed,
             'Messages': messages
             })
-
 
     def test_password_policy(self, req_results):
         title = 'Password Policy'
@@ -1267,7 +1267,6 @@ class OFXServerTests():
             'Messages': messages
             })
 
-
     def test_server_diclosure(self, server):
         title = 'Web Server Disclosure'
         passed = True
@@ -1284,6 +1283,30 @@ class OFXServerTests():
             passed = False
             msg = 'Web server discloses type and version: {}'.format(s)
             messages.append(msg)
+
+        self.results.append({
+            'Title': title,
+            'Passed': passed,
+            'Messages': messages
+            })
+
+    def test_content_type(self, req_results):
+        title = 'Incorrect Content-Type'
+        passed = True
+        messages = []
+
+        for req_name in [
+            REQ_NAME_POST_OFX,
+            REQ_NAME_OFX_EMPTY,
+            REQ_NAME_OFX_PROFILE]:
+
+            ctype = req_results[req_name].headers['Content-Type']
+
+            if ctype != CONTENT_TYPE:
+                msg = '{}: Incorrect Content-Type in OFX response: {}'.format(
+                        req_name, ctype)
+                messages.append(msg)
+                passed = False
 
         self.results.append({
             'Title': title,
