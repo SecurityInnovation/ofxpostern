@@ -311,7 +311,10 @@ class OFXServerInstance():
         self._fingerprint_service_provider(req_results)
 
     def get_tls(self):
-        return self.tls['working']
+        try:
+            return self.tls['working']
+        except KeyError:
+            return True
 
     def set_tls(self, working):
         self.tls['working'] = working

@@ -181,6 +181,8 @@ def check_tls(server, tls_verify):
     '''
     Check server TLS settings.
     '''
+    if cache:
+        return
 
     # Do a simple works/not works check for now
     try:
