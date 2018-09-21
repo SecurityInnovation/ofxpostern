@@ -204,6 +204,9 @@ def report_cli_fi(profrs):
     print_header('Financial Institution', 2)
     print()
 
+    if not profrs:
+        return
+
     fi_list = []
     output = (
             ('FINAME', 'Name'),
@@ -250,6 +253,9 @@ def report_cli_server(profrs):
     print_header('OFX Server', 2)
     print()
 
+    if not profrs:
+        return
+
     fi_list = []
 
     fi_list.append(('OFX Version', profrs.get_version()))
@@ -280,6 +286,9 @@ def report_cli_capabilities(profrs):
     '''
     print_header('Capabilities', 2)
     print()
+
+    if not profrs:
+        return
 
     cap_tree = []
 
@@ -493,6 +502,7 @@ def main():
 
     # TODO: validate input
     server = testofx.OFXServerInstance(args.url, args.fid, args.org)
+    profrs = None
 
     # Initialize Persistent Cache
     init(server)
@@ -515,12 +525,21 @@ def main():
         print('  Sending {}'.format(req_name))
         send_req(server, req_name)
     print('  Analysing Server')
-    profrs = testofx.OFXFile(req_results[testofx.REQ_NAME_OFX_PROFILE].text)
+    try:
+        profrs = testofx.OFXFile(req_results[testofx.REQ_NAME_OFX_PROFILE].text)
+    except ValueError as ex:
+        print('    {}'.format(ex))
     print('  Fingerprinting')
-    server.fingerprint(req_results)
+    try:
+        server.fingerprint(req_results)
+    except ValueError as ex:
+        print('    {}'.format(ex))
     print('  Running Tests')
     tests = testofx.OFXServerTests(server)
-    tests.run_tests(req_results)
+    errors = tests.run_tests(req_results)
+    if len(errors) > 0:
+        for err in errors:
+            print('    {}'.format(err))
     print('End:   {}'.format(time.asctime()))
     time.sleep(1)
     print()

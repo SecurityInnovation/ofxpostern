@@ -290,7 +290,8 @@ class OFXServerInstance():
 
         # Determine which service provider (if any) is hosting this instance
         domain_map = {
-            'ofx.netxclient.com': 'Pershing'
+            'ofx.netxclient.com': 'Pershing',
+            'uat-ofx.netxclient.inautix.com': 'Pershing',
         }
 
         sp = ''
@@ -1136,17 +1137,30 @@ class OFXServerTests():
     '''
 
     results = []
+    profrs = None
 
     def __init__(self, server):
         self.si = server
 
     def run_tests(self, req_results):
+        messages = []
+
+        try:
+            self.profrs = OFXFile(req_results[REQ_NAME_OFX_PROFILE].text)
+        except ValueError:
+            msg = 'Cannot read OFX PROFILE, some tests will not be run.'
+            messages.append(msg)
+
         self.test_tls(self.si)
-        self.test_server_diclosure(self.si)
-        self.test_mfa(req_results)
-        self.test_password_policy(req_results)
-        self.test_user_disclosure(req_results)
         self.test_content_type(req_results)
+        self.test_server_diclosure(self.si)
+
+        if self.profrs:
+            self.test_mfa(req_results)
+            self.test_password_policy(req_results)
+            self.test_user_disclosure(req_results)
+
+        return messages
 
     def test_tls(self, server):
         title = 'Transport Layer Security (TLS)'
@@ -1169,17 +1183,15 @@ class OFXServerTests():
         passed = True
         messages = []
 
-        profrs = OFXFile(req_results[REQ_NAME_OFX_PROFILE].text)
-
-        if profrs.major_version() == 1:
+        if self.profrs.major_version() == 1:
             requirement = 103
-        elif profrs.major_version() == 2:
+        elif self.profrs.major_version() == 2:
             requirement = 203
 
-        if profrs.version and profrs.version < requirement:
+        if self.profrs.version and self.profrs.version < requirement:
             passed = False
             msg = 'OFX protocol version ({}) does not support MFA'.format(
-                    profrs.get_version())
+                    self.profrs.get_version())
             messages.append(msg)
 
         self.results.append({
@@ -1193,12 +1205,10 @@ class OFXServerTests():
         passed = True
         messages = []
 
-        profrs = OFXFile(req_results[REQ_NAME_OFX_PROFILE].text)
-
         minpass = None
         requirement = 8
         try:
-            minpass = profrs.profile['AUTHENTICATION']['MINPASS']
+            minpass = self.profrs.profile['AUTHENTICATION']['MINPASS']
         except KeyError:
             pass
         if minpass and minpass < requirement:
@@ -1226,9 +1236,8 @@ class OFXServerTests():
         'feedback', 'central', 'center', 'bookkeep', 'ask', 'virtual',
         'management', 'operation', 'contact', 'inbox', 'staff', 'investor']
 
-        profrs = OFXFile(req_results[REQ_NAME_OFX_PROFILE].text)
         try:
-            email = profrs.profile['EMAIL']
+            email = self.profrs.profile['EMAIL']
         except:
             email = ''
 
