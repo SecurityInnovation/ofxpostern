@@ -339,6 +339,10 @@ def report_cli_capabilities(profrs):
                 sub_tree.append('Balances')
         except KeyError: pass
         try:
+            if v1['401K']:
+                sub_tree.append('401(k)')
+        except KeyError: pass
+        try:
             if v1['QUOTES']:
                 sub_tree.append('Quotes')
         except KeyError: pass

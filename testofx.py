@@ -1074,6 +1074,12 @@ class OFXFile():
                 ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:invstmtmsgset:invstmtmsgsetv1:baldnld',
                  'bool',
                  'INVESTMENT:BALANCES'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:invstmtmsgset:invstmtmsgsetv1:inv401kdnld',
+                 'bool',
+                 'INVESTMENT:401K'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:seclistmsgset:seclistmsgsetv1:seclistrqdnld',
+                 'bool',
+                 'INVESTMENT:QUOTES'),
 
                 # Taxes
                 ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:tax1099msgset:tax1099msgsetv1',
