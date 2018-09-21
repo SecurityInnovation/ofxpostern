@@ -289,15 +289,26 @@ class OFXServerInstance():
     def _fingerprint_service_provider(self, req_results):
 
         # Determine which service provider (if any) is hosting this instance
-        # TODO: URL map
-
-        # For now, just read the value out of <SPNAME> if it exists
-        profrs = OFXFile(req_results[REQ_NAME_OFX_PROFILE].text)
+        domain_map = {
+            'ofx.netxclient.com': 'Pershing'
+        }
 
         sp = ''
+
+        parsed = urlparse(self.ofxurl)
+
         try:
-            sp = profrs.profile['SPNAME']
-        except KeyError: pass
+            sp = domain_map[parsed.netloc]
+        except KeyError:
+            pass
+
+        # Try the domain map first, fallback to SPNAME
+        if sp == '':
+            profrs = OFXFile(req_results[REQ_NAME_OFX_PROFILE].text)
+
+            try:
+                sp = profrs.profile['SPNAME']
+            except KeyError: pass
 
         self.serviceprovider = sp
 
