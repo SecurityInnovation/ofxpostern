@@ -336,6 +336,29 @@ def report_cli_capabilities(profrs):
         cap_tree.append(sub_tree)
     except KeyError: pass
 
+
+    try:
+        v1 = profrs.profile['TAXES']
+        cap_tree.append('Taxes')
+        sub_tree = []
+        try:
+            if v1['1099']:
+                sub_tree.append('1099')
+        except KeyError: pass
+        try:
+            if v1['1099B']:
+                sub_tree.append('Schedule D')
+        except KeyError: pass
+        try:
+            sub_sub_tree = []
+            v2 = v1['YEARS']
+            sub_tree.append('Years')
+            sub_sub_tree.append(v2)
+            sub_tree.append(sub_sub_tree)
+        except KeyError: pass
+        cap_tree.append(sub_tree)
+    except KeyError: pass
+
     try:
         v1 = profrs.profile['MESSAGING']
         cap_tree.append('Messaging')

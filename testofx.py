@@ -10,6 +10,7 @@ import requests
 import time
 from urllib.parse import urlparse
 from uuid import uuid4
+from xmltodict import parse as xmlparse
 
 #
 # Defines
@@ -651,6 +652,7 @@ class OFXFile():
     '''
 
     _file_str = ''
+    _v2_dict = {}
 
     headers = {}
     version = None
@@ -662,6 +664,10 @@ class OFXFile():
 
         self._convert_newlines()
         self._parse_header()
+
+        if self.major_version() == 2:
+            self._v2_dict = xmlparse(file_str)
+
         self._parse_signon()
         self._parse_profile()
 
@@ -765,6 +771,62 @@ class OFXFile():
         else:
             return None
 
+    def _v2_retrieve_element(self, elmpath, etype):
+        '''
+        Walk a dictionary tree and retrieve values from it.
+
+        tagpath -  ex: 'ofx:signonmsgsrsv1:sonrs:fi:org'
+        etype - ex: 'string'
+        '''
+        val = None
+        node = self._v2_dict
+        elmlist = elmpath.split(':')
+
+        for elm in elmlist:
+            try:
+                node = node[elm.upper()]
+            except KeyError:
+                break
+            if elm == elmlist[-1]:
+                if etype == 'string':
+                    val = node
+                if etype == 'bool':
+                    if node == 'Y':
+                        val = True
+                    elif node == 'N':
+                        val = False
+                    else:
+                        raise ValueError('Unknown value for {}: {}'.format(
+                            elmpath, val))
+                if etype == 'integer':
+                    val = int(node)
+                elif etype == 'exist':
+                    val = True
+                break
+
+        return val
+
+
+    def _path_to_dict(self, path, value):
+        '''
+        Given a string path, nest dictionaries and set a value.
+
+        path - ex: 'investment:transactions'
+        '''
+
+        nodelist = path.split(':')
+        node = self.profile
+
+        for name in nodelist:
+            try:
+                node = node[name]
+            except KeyError:
+                if name == nodelist[-1] and value is not None:
+                    node[name] = value
+                else:
+                    node[name] = dict()
+
+
     def _parse_signon(self):
         '''
         Parse a SIGNON response if one exists
@@ -785,7 +847,19 @@ class OFXFile():
                     self.signon[elm] = val
 
         elif self.major_version() == 2:
-            raise NotImplemented()
+            val = self._v2_retrieve_element(
+                    'ofx:signonmsgsrsv1:sonrs:fi:org',
+                    'string'
+                    )
+            if val:
+                self.signon['ORG'] = val
+
+            val = self._v2_retrieve_element(
+                    'ofx:signonmsgsrsv1:sonrs:fi:fid',
+                    'string'
+                    )
+            if val:
+                self.signon['FID'] = val
 
     def _parse_profile(self):
         '''
@@ -920,7 +994,117 @@ class OFXFile():
                     self.profile['AUTHENTICATION']['MFA']['CLIENTUID'] = True
 
         elif self.major_version() == 2:
-            raise NotImplemented()
+            # Confirm that a PROFILE response exists
+            if not self._v2_retrieve_element(
+                    'ofx:profmsgsrsv1:proftrnrs:profrs',
+                    'exist'):
+                return
+
+            # OFX Path, Retrieve Type, Profile Object Path
+            profile_elms = [
+                # Get FI contact information
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:finame',
+                 'string',
+                 'FINAME'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:addr1',
+                 'string',
+                 'ADDR1'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:addr2',
+                 'string',
+                 'ADDR2'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:addr3',
+                 'string',
+                 'ADDR3'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:city',
+                 'string',
+                 'CITY'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:state',
+                 'string',
+                 'STATE'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:postalcode',
+                 'string',
+                 'POSTALCODE'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:country',
+                 'string',
+                 'COUNTRY'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:email',
+                 'string',
+                 'EMAIL'),
+
+                # Get OFX URL
+                # Technically this can be different for every message set,
+                # in practice it's usually identical to the PROFILE server.
+                # However, if it is different, it's usually the same for every
+                # other message set besides PROFMSGSET.
+
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:signonmsgset:signonmsgsetv1:msgsetcore:url',
+                 'string',
+                 'OFXURL'),
+
+                # Get FI capabilities
+
+                # Investments
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:invstmtmsgset',
+                 'exist',
+                 'INVESTMENT'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:invstmtmsgset:invstmtmsgsetv1:trandnld',
+                 'bool',
+                 'INVESTMENT:TRANSACTIONS'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:invstmtmsgset:invstmtmsgsetv1:oodnld',
+                 'bool',
+                 'INVESTMENT:OPENORDERS'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:invstmtmsgset:invstmtmsgsetv1:posdnld',
+                 'bool',
+                 'INVESTMENT:POSITIONS'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:invstmtmsgset:invstmtmsgsetv1:baldnld',
+                 'bool',
+                 'INVESTMENT:BALANCES'),
+
+                # Taxes
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:tax1099msgset:tax1099msgsetv1',
+                 'exist',
+                 'TAXES'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:tax1099msgset:tax1099msgsetv1:tax1099dnld',
+                 'bool',
+                 'TAXES:1099'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:tax1099msgset:tax1099msgsetv1:extd1099b',
+                 'bool',
+                 'TAXES:1099B'),
+                # TODO: There could be multiple years returned.
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:msgsetlist:tax1099msgset:tax1099msgsetv1:taxyearsupported',
+                 'string',
+                 'TAXES:YEARS'),
+
+                # Get Password Policy
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:signoninfolist:signoninfo',
+                 'exist',
+                 'AUTHENTICATION'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:signoninfolist:signoninfo:min',
+                 'integer',
+                 'AUTHENTICATION:MINPASS'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:signoninfolist:signoninfo:max',
+                 'integer',
+                 'AUTHENTICATION:MAXPASS'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:signoninfolist:signoninfo:chartype',
+                 'string',
+                 'AUTHENTICATION:COMPLEXITY'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:signoninfolist:signoninfo:casesen',
+                 'bool',
+                 'AUTHENTICATION:CASESEN'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:signoninfolist:signoninfo:special',
+                 'bool',
+                 'AUTHENTICATION:SPECIAL'),
+                ('ofx:profmsgsrsv1:proftrnrs:profrs:signoninfolist:signoninfo:clientuidreq',
+                 'bool',
+                 'AUTHENTICATION:MFA:CLIENTUID'),
+            ]
+
+            for elm in profile_elms:
+                val = self._v2_retrieve_element(elm[0], elm[1])
+                if val:
+                    # We set None to mean create a sub-dictionary
+                    val = val if elm[1] != 'exist' else None
+                    self._path_to_dict(elm[2], val)
 
     def get_version(self):
         '''
@@ -974,18 +1158,21 @@ class OFXServerTests():
 
         if profrs.major_version() == 1:
             requirement = 103
+        elif profrs.major_version() == 2:
+            requirement = 203
 
-            if profrs.version and profrs.version < requirement:
-                passed = False
-                msg = 'OFX protocol version ({}) does not support MFA'.format(
-                        profrs.get_version())
-                messages.append(msg)
+        if profrs.version and profrs.version < requirement:
+            passed = False
+            msg = 'OFX protocol version ({}) does not support MFA'.format(
+                    profrs.get_version())
+            messages.append(msg)
 
-            self.results.append({
-                'Title': title,
-                'Passed': passed,
-                'Messages': messages
-                })
+        self.results.append({
+            'Title': title,
+            'Passed': passed,
+            'Messages': messages
+            })
+
 
     def test_password_policy(self, req_results):
         title = 'Password Policy'
