@@ -757,6 +757,27 @@ class OFXFile():
         elif str(self.version).startswith('2'):
             return 2
 
+    def find_span_value(self, value, ofx_str=None, casesen=False):
+        '''
+        Find the span ELEMENT which contains the given value.
+        '''
+
+        if not ofx_str: ofx_str = self._file_str
+
+        if self.major_version() == 1:
+            rpat = r'<([\w.+]+)>'+value
+
+        elif self.major_version() == 2:
+            rpat = r'<(?P<elm>[\w.+]+)>'+value+r'</(?P=elm)>'
+
+        flags = 0 if casesen else re.IGNORECASE
+        matches = re.finditer(rpat, ofx_str, flags)
+
+        if matches:
+            return [m.group(0) for m in matches]
+        else:
+            return None
+
     def _parse_element_block(self, element, ofx_str=None):
         '''
         Read the internal values of a block element including other elements.
@@ -1166,6 +1187,8 @@ class OFXServerTests():
             self.test_password_policy(req_results)
             self.test_user_disclosure(req_results)
 
+        self.test_null_values(req_results)
+
         return messages
 
     def test_tls(self, server):
@@ -1328,7 +1351,33 @@ class OFXServerTests():
 
         self.results.append({
             'Title': title,
+            'Passed': passed, 'Messages': messages
+            })
+
+    def test_null_values(self, req_results):
+        title = 'Null Values Returned'
+        passed = True
+        messages = []
+
+        for req_name in [
+            REQ_NAME_POST_OFX,
+            REQ_NAME_OFX_EMPTY,
+            REQ_NAME_OFX_PROFILE]:
+
+            try:
+                resp = OFXFile(req_results[req_name].text)
+            except ValueError:
+                # Ignore if we didn't get an OFX reponse back
+                pass
+
+            matches = resp.find_span_value('null')
+            for m in matches:
+                msg = '{}: null value returned: {}'.format(req_name, m)
+                messages.append(msg)
+                passed = False
+
+        self.results.append({
+            'Title': title,
             'Passed': passed,
             'Messages': messages
             })
-
