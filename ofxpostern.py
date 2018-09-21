@@ -20,7 +20,7 @@ import testofx
 
 PROGRAM_DESCRIPTION = 'Fingerprint an OFX server.'
 PROGRAM_NAME = 'ofxpostern'
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 
 DATA_DIR = '{}/.{}'.format(os.environ['HOME'], PROGRAM_NAME)
 FIS_DIR = '{}/{}'.format(DATA_DIR, 'fi')
