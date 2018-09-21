@@ -1188,6 +1188,7 @@ class OFXServerTests():
             self.test_user_disclosure(req_results)
 
         self.test_null_values(req_results)
+        self.test_500_http_response(req_results)
 
         return messages
 
@@ -1285,13 +1286,13 @@ class OFXServerTests():
         if '@' in email:
             email_lc = email.lower()
             name = email_lc.split('@')[0]
-            domain = email_lc.split('@')[1].rsplit('.')[1]
+            domain = email_lc.split('@')[1].split('.')[-2]
 
             if name in common_aliases_exact:
                 pass
             elif any(substring in name for substring in common_aliases_in):
                 pass
-            elif name == domain:
+            elif name.startswith(domain):
                 pass
             else:
                 passed = False
@@ -1341,7 +1342,7 @@ class OFXServerTests():
             REQ_NAME_OFX_EMPTY,
             REQ_NAME_OFX_PROFILE]:
 
-            ctype = req_results[req_name].headers['Content-Type']
+            ctype = req_results[req_name].headers['Content-Type'].split(';')[0]
 
             if ctype != CONTENT_TYPE:
                 msg = '{}: Incorrect Content-Type in OFX response: {}'.format(
@@ -1366,13 +1367,46 @@ class OFXServerTests():
 
             try:
                 resp = OFXFile(req_results[req_name].text)
+                matches = resp.find_span_value('null')
+                for m in matches:
+                    msg = '{}: null value returned: {}'.format(req_name, m)
+                    messages.append(msg)
+                    passed = False
             except ValueError:
                 # Ignore if we didn't get an OFX reponse back
                 pass
 
-            matches = resp.find_span_value('null')
-            for m in matches:
-                msg = '{}: null value returned: {}'.format(req_name, m)
+        self.results.append({
+            'Title': title,
+            'Passed': passed,
+            'Messages': messages
+            })
+
+    def test_500_http_response(self, req_results):
+        title = 'Internal Server Errors'
+        passed = True
+        messages = []
+
+        # We'll ignore most 500 errors. Only complain about information
+        # disclosure.
+
+        for req_name in [
+            REQ_NAME_POST_OFX,
+            REQ_NAME_OFX_EMPTY,
+            REQ_NAME_OFX_PROFILE]:
+
+            if req_results[req_name].status_code != 500:
+                continue
+
+            body = req_results[req_name].text
+
+            if len(body) == 0:
+                continue
+
+            # Check for known bad return messages
+            if body.startswith('Error 500:'):
+                msg = '{}: Verbose error message: {}'.format(req_name,
+                        body.splitlines()[0])
                 messages.append(msg)
                 passed = False
 
@@ -1381,3 +1415,4 @@ class OFXServerTests():
             'Passed': passed,
             'Messages': messages
             })
+
