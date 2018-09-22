@@ -19,7 +19,7 @@ Example:
 
 `./ofxpostern.py -o Cavion -f 11135 https://ofx.lanxtra.com/ofx/servlet/Teller`
 
-The Financial Identifer (FID) and Oranganization (ORG) are sometimes optional, sometimes required depending on the Financial Institution.
+The Financial Identifer (FID) and Organization (ORG) are sometimes optional, sometimes required depending on the Financial Institution.
 
 A current list of public OFX servers is available at https://ofxhome.com/.
 
@@ -27,7 +27,7 @@ A current list of public OFX servers is available at https://ofxhome.com/.
 
 Only a small number of security tests are currently implemented. All are done with anonymous credentials.
 
-* Check for MFA support within the protocol.
+* Check for MFA support within the protocol
 * Check password policy
 
 ## Advanced
