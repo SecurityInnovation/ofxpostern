@@ -1205,6 +1205,7 @@ class OFXServerTests():
 
         self.test_null_values(req_results)
         self.test_500_http_response(req_results)
+        self.test_internal_ip(req_results)
 
         return messages
 
@@ -1425,6 +1426,40 @@ class OFXServerTests():
                         body.splitlines()[0])
                 messages.append(msg)
                 passed = False
+
+        self.results.append({
+            'Title': title,
+            'Passed': passed,
+            'Messages': messages
+            })
+
+    def test_internal_ip(self, req_results):
+        title = 'Internal IP Address Disclosure'
+        passed = True
+        messages = []
+
+        for req_name in [
+            REQ_NAME_GET_ROOT,
+            REQ_NAME_GET_OFX,
+            REQ_NAME_POST_OFX,
+            REQ_NAME_OFX_EMPTY,
+            REQ_NAME_OFX_PROFILE]:
+
+            body = req_results[req_name].text
+
+            if len(body) == 0:
+                continue
+
+            # regex for known internal IP addresses
+            rpat = r'http[s]?://((localhost)|(127\.0\.0\.[0-9]{1,3})|(10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})):?[0-9]{0,5}/?[\w\-/]*'
+
+            matches = re.finditer(rpat, body)
+
+            if matches:
+                for m in [m.group(0) for m in matches]:
+                    msg = '{}: Internal IP returned: {}'.format(req_name, m)
+                    messages.append(msg)
+                    passed = False
 
         self.results.append({
             'Title': title,
