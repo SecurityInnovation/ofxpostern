@@ -361,6 +361,13 @@ def report_cli_capabilities(profrs):
     except KeyError: pass
 
     try:
+        v1 = profrs.profile['BILLPAY']
+        cap_tree.append('Bill Pay')
+        sub_tree = []
+        cap_tree.append(sub_tree)
+    except KeyError: pass
+
+    try:
         v1 = profrs.profile['TAXES']
         cap_tree.append('Taxes')
         sub_tree = []
