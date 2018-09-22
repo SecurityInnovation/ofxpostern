@@ -243,6 +243,14 @@ class OFXServerInstance():
 
     def _fingerprint_webframework(self, req_results):
 
+        def _check_resp_body(res):
+            body = res.text
+            if body:
+                first_line = body.splitlines()[0]
+                if first_line.startswith('Error 404: SRVE0190E:'):
+                    if self.webframework == '':
+                        self.webframework = 'WebSphere'
+
         # Extract Web Framework from successful OFX requests
         # The web framework on the root of the path can be different
         exclude = ['DI - An Intuit Company']
@@ -256,6 +264,14 @@ class OFXServerInstance():
                     'webframework',
                     exclude,
                     [])
+
+        # Extract framework out of error body
+        for req_name in [
+                REQ_NAME_GET_ROOT
+                ]:
+
+            res = req_results[req_name]
+            _check_resp_body(res)
 
     def _fingerprint_software(self, req_results):
 
