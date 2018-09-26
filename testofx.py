@@ -302,6 +302,14 @@ class OFXServerInstance():
         except KeyError:
             pass
 
+        # Fingerprint version number
+        if self.software['Company'] == 'Enterprise Engineering':
+            # EFTX has a splash page with version number by default
+            rpat = r'Servlet Version ([0-9.]+)'
+            match = re.search(rpat, req_results[REQ_NAME_GET_OFX].text)
+            if match:
+                self.software['Version'] = 'Servlet {}'.format(match.group(1))
+
     def _fingerprint_service_provider(self, req_results):
 
         # Determine which service provider (if any) is hosting this instance
