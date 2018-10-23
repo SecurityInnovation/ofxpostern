@@ -265,6 +265,15 @@ class OFXServerInstance():
                     exclude,
                     [])
 
+            if self.webframework == 'ASP.NET':
+                # Check for extra ASP.NET version headers
+                val = None
+                try:
+                    val = res.headers['X-AspNet-Version']
+                except KeyError:
+                    continue
+                self.webframework += '/{}'.format(val)
+
         # Extract framework out of error body
         for req_name in [
                 REQ_NAME_GET_ROOT
@@ -1353,6 +1362,12 @@ class OFXServerTests():
         if s != '' and any(str(num) in s for num in range(10)):
             passed = False
             msg = 'Web server discloses type and version: {}'.format(s)
+            messages.append(msg)
+
+        f = server.webframework
+        if f != '' and any(str(num) in s for num in range(10)):
+            passed = False
+            msg = 'Web framework discloses type and version: {}'.format(f)
             messages.append(msg)
 
         self.results.append({
