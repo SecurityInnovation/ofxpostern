@@ -325,6 +325,7 @@ class OFXServerInstance():
         domain_map = {
             'ofx.netxclient.com': 'Pershing',
             'uat-ofx.netxclient.inautix.com': 'Pershing',
+            'www.oasis.cfree.com': 'Fiserv - CheckFree - Oasis'
         }
 
         sp = ''
