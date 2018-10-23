@@ -1429,15 +1429,19 @@ class OFXServerTests():
 
             body = req_results[req_name].text
 
-            if len(body) == 0:
-                continue
-
             # Check for known bad return messages
             if body.startswith('Error 500:'):
                 msg = '{}: Verbose error message: {}'.format(req_name,
                         body.splitlines()[0])
                 messages.append(msg)
-                passed = False
+            elif req_name in [
+                REQ_NAME_POST_OFX,
+                REQ_NAME_OFX_EMPTY
+                ]:
+                msg = '{}: Unhandled exception parsing invalid input'.format(
+                        req_name)
+                messages.append(msg)
+            passed = False
 
         self.results.append({
             'Title': title,
