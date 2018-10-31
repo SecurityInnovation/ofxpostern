@@ -25,7 +25,7 @@ A current list of public OFX servers is available at https://ofxhome.com/.
 
 ## Security Scan
 
-Only a small number of security tests are currently implemented. All are done with anonymous credentials.
+A small number of security tests are implemented. All are done with anonymous credentials.
 
 * Check that TLS is required
 * Check for correct application/x-ofx content-type
