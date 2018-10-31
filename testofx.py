@@ -1387,7 +1387,15 @@ class OFXServerTests():
             REQ_NAME_OFX_EMPTY,
             REQ_NAME_OFX_PROFILE]:
 
-            ctype = req_results[req_name].headers['Content-Type'].split(';')[0]
+            # TODO: Check for OFX header
+            if req_results[req_name].status_code == 400:
+                continue
+
+            try:
+                ctype = req_results[req_name].headers['Content-Type'].split(';')[0]
+            except KeyError:
+                # TODO: test if content-length is 0, if not raise an error
+                continue
 
             if ctype != CONTENT_TYPE:
                 msg = '{}: Incorrect Content-Type in OFX response: {}'.format(
