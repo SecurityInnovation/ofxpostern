@@ -27,8 +27,15 @@ A current list of public OFX servers is available at https://ofxhome.com/.
 
 Only a small number of security tests are currently implemented. All are done with anonymous credentials.
 
+* Check that TLS is required
+* Check for correct application/x-ofx content-type
+* Check for web server / framework version disclosure
 * Check for MFA support within the protocol
 * Check password policy
+* Check for username disclosure
+* Check for NULL return values
+* Check for Internal Server Error 500
+* Check for internal IP address disclosure
 
 ## Advanced
 
