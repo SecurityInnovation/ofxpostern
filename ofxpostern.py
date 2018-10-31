@@ -35,7 +35,7 @@ STR_OBJ     = 'object'
 #
 
 debug = False
-cache = True
+cache = False
 
 fi_dir = ''
 
