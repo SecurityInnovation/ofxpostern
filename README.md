@@ -40,3 +40,13 @@ A small number of security tests are implemented. All are done with anonymous cr
 ## Advanced
 
 Within the *ofxpostern.py* script the *cache* global variable can be enabled to store text copies of all OFX protocol responses to `$HOME/.ofxpostern/`.
+
+## Docker
+```bash
+# Get this project
+git clone git@github.com:sdann/ofxpostern.git
+cd ofxpostern
+# run with docker
+docker build -tag ofxpostern 
+docker run ofxpostern  -o Cavion -f 11135 https://ofx.lanxtra.com/ofx/servlet/Teller
+```
