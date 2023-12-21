@@ -382,7 +382,8 @@ class OFXTestClient():
             use_cache=False,
             output=False,
             version='102',
-            tls_verify=True
+            tls_verify=True,
+            proxy_url=None
             ):
         self.timeout = timeout
         self.wait = wait
@@ -390,6 +391,7 @@ class OFXTestClient():
         self._output=output
         self.version = version
         self.tls_verify = tls_verify
+        self.proxy_url = proxy_url
 
         if self.version[0] == '1':
             self.ofxheader = OFX_HEADER_100.format(version=self.version)
@@ -427,21 +429,42 @@ class OFXTestClient():
 
         if self._output: print("{}".format(url))
         try:
+            if self.proxy_url:
+                s = requests.Session()
+                s.proxies = {'http': self.proxy_url, 'https': self.proxy_url}
+
             if method == 'GET':
-                r = requests.get(
-                        url,
-                        headers=headers,
-                        timeout=self.timeout,
-                        verify=tls_verify
-                        )
+                if self.proxy_url:
+                    r = s.get(
+                            url,
+                            headers=headers,
+                            timeout=self.timeout,
+                            verify=False
+                            )
+                else:
+                    r = requests.get(
+                            url,
+                            headers=headers,
+                            timeout=self.timeout,
+                            verify=tls_verify
+                            )
             elif method == 'POST':
-                r = requests.post(
-                        url,
-                        headers=headers,
-                        timeout=self.timeout,
-                        verify=tls_verify,
-                        data=body
-                        )
+                if self.proxy_url:
+                    r = s.post(
+                            url,
+                            headers=headers,
+                            timeout=self.timeout,
+                            verify=False,
+                            data=body
+                            )
+                else:
+                    r = requests.post(
+                            url,
+                            headers=headers,
+                            timeout=self.timeout,
+                            verify=tls_verify,
+                            data=body
+                            )
             if self.use_cache:
                 self.cache[url] = r
             return (r, False)

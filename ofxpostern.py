@@ -140,7 +140,7 @@ def print_list(lst, indent=0):
 # Core Logic
 #
 
-def send_req(server, req_name):
+def send_req(server, req_name, proxy_url=None):
     '''
     Send request to the OFX server.
     '''
@@ -161,7 +161,8 @@ def send_req(server, req_name):
             cached = False
 
     if not cache or not cached:
-        otc = testofx.OFXTestClient(output=debug, tls_verify=server.get_tls())
+        otc = testofx.OFXTestClient(output=debug, tls_verify=server.get_tls(),
+                                    proxy_url=proxy_url)
         res = otc.send_req(req_name, server)
 
         # Store result for analysis
@@ -506,7 +507,12 @@ def main():
             action='store_false',
             help='Skip TLS verification',
             required=False)
-    parser.set_defaults(tls_verify=True)
+    parser.add_argument('--proxy',
+        dest='proxy_url',
+        action='store',
+        help='Use a intercepting proxy, such as Burp Suite',
+        required=False)
+    parser.set_defaults(tls_verify=True, proxy_url=None)
     args = parser.parse_args()
 
     print_debug(args)
@@ -534,7 +540,7 @@ def main():
     check_tls(server, args.tls_verify)
     for req_name in requests:
         print('  Sending {}'.format(req_name))
-        send_req(server, req_name)
+        send_req(server, req_name, proxy_url=args.proxy_url)
     print('  Analysing Server')
     try:
         profrs = testofx.OFXFile(req_results[testofx.REQ_NAME_OFX_PROFILE].text)
