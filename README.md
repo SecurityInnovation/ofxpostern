@@ -15,11 +15,15 @@ Vulnerability scanner for OFX servers.
 
 `./ofxpostern.py [-f FID] [-o ORG] [--proxy proxy_url] url`
 
-Example:
-`./ofxpostern.py -o Cavion -f 11135 https://ofx.lanxtra.com/ofx/servlet/Teller`
+Examples:
+```bash
+./ofxpostern.py -o Cavion -f 11135 https://ofx.lanxtra.com/ofx/servlet/Teller
+```
 
-Using a proxy to intercept your traffic
-`./ofxpostern.py -o Cavion -f 11135 --proxy http://127.0.0.1:8080 https://ofx.lanxtra.com/ofx/servlet/Teller`
+Using a web proxy (Burp Suite, Fiddler) to intercept and inspect your traffic across the wire:
+```bash
+./ofxpostern.py -o Cavion -f 11135 --proxy http://127.0.0.1:8080 https://ofx.lanxtra.com/ofx/servlet/Teller
+```
 
 The Financial Identifer (FID) and Organization (ORG) are sometimes optional, sometimes required depending on the Financial Institution.
 
